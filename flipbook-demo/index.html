@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📖 Web Book Explorer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 40%, #2d1b4e 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  color: #fff;
+}
+
+/* Animated background particles */
+.bg-particles {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  animation: float linear infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(100vh) scale(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+  z-index: 10;
+  position: relative;
+}
+
+.header h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #ffd200 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.header p {
+  color: rgba(255,255,255,0.5);
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+}
+
+/* Book container */
+#book-container {
+  position: relative;
+  z-index: 10;
+  filter: drop-shadow(0 20px 60px rgba(0,0,0,0.5));
+}
+
+#book {
+  width: 800px;
+  height: 560px;
+}
+
+/* Individual pages */
+.page {
+  overflow: hidden;
+  border-radius: 0;
+  position: relative;
+}
+
+.page iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  pointer-events: auto;
+}
+
+/* Page overlay with page info */
+.page-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, #1e1e2e 0%, #2a2a4a 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  z-index: 1;
+  transition: opacity 0.4s;
+}
+
+.page-overlay .page-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+}
+
+.page-overlay h2 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #fff;
+  text-align: center;
+}
+
+.page-overlay p {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.6);
+  text-align: center;
+  max-width: 300px;
+  line-height: 1.6;
+}
+
+.page-overlay .enter-btn {
+  margin-top: 24px;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  border: none;
+  border-radius: 50px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(240, 147, 251, 0.3);
+}
+
+.page-overlay .enter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(240, 147, 251, 0.5);
+}
+
+/* Cover pages */
+.cover-front {
+  background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%) !important;
+}
+
+.cover-back {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+}
+
+/* Navigation controls */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 24px;
+  z-index: 10;
+  position: relative;
+}
+
+.nav-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.nav-btn:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.3);
+  transform: scale(1.1);
+}
+
+.page-indicator {
+  color: rgba(255,255,255,0.5);
+  font-size: 0.85rem;
+  min-width: 80px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.page-indicator span {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Bookmark dots */
+.bookmarks {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  z-index: 10;
+  position: relative;
+}
+
+.bookmark-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.bookmark-dot.active {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  box-shadow: 0 0 12px rgba(240, 147, 251, 0.5);
+  transform: scale(1.3);
+}
+
+.bookmark-dot:hover {
+  background: rgba(255,255,255,0.3);
+  transform: scale(1.2);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  #book { width: 95vw; height: 65vw; }
+  .header h1 { font-size: 1.5rem; }
+  .page-overlay h2 { font-size: 1.1rem; }
+  .page-overlay .page-icon { font-size: 2.5rem; }
+}
+
+/* Glow effect behind book */
+.book-glow {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(240,147,251,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+  animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* Loading state */
+.loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(255,255,255,0.5);
+  font-size: 0.9rem;
+  z-index: 100;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: #f093fb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body>
+
+<!-- Background particles -->
+<div class="bg-particles" id="particles"></div>
+
+<!-- Glow -->
+<div class="book-glow" id="bookGlow"></div>
+
+<!-- Header -->
+<div class="header">
+  <h1>📖 Web Book Explorer</h1>
+  <p>翻页探索精彩网页世界</p>
+</div>
+
+<!-- Book -->
+<div id="book-container">
+  <div id="book">
+    <!-- Cover front -->
+    <div class="page" data-density="hard">
+      <div class="page-overlay cover-front">
+        <div class="page-icon">🌐</div>
+        <h2>Web Book Explorer</h2>
+        <p>一本装满精彩网页的书<br>翻开它，开始探索吧</p>
+        <button class="enter-btn" onclick="document.getElementById('nextBtn').click()">翻开 →</button>
+      </div>
+    </div>
+
+    <!-- Page 1: Wikipedia -->
+    <div class="page">
+      <div class="page-overlay" data-page-info>
+        <div class="page-icon">📚</div>
+        <h2>Wikipedia</h2>
+        <p>人类知识的总和，自由百科全书</p>
+        <button class="enter-btn" data-enter>进入探索</button>
+      </div>
+      <iframe data-iframe src="about:blank" data-src="https://zh.wikipedia.org/wiki/Portal:Today"></iframe>
+    </div>
+
+    <!-- Page 2: Hacker News -->
+    <div class="page">
+      <div class="page-overlay" data-page-info>
+        <div class="page-icon">🔥</div>
+        <h2>Hacker News</h2>
+        <p>科技圈热点，程序员必读</p>
+        <button class="enter-btn" data-enter>进入探索</button>
+      </div>
+      <iframe data-iframe src="about:blank" data-src="https://news.ycombinator.com"></iframe>
+    </div>
+
+    <!-- Page 3: GitHub -->
+    <div class="page">
+      <div class="page-overlay" data-page-info>
+        <div class="page-icon">🐙</div>
+        <h2>GitHub</h2>
+        <p>全球最大的代码开源社区</p>
+        <button class="enter-btn" data-enter>进入探索</button>
+      </div>
+      <iframe data-iframe src="about:blank" data-src="https://github.com/trending"></iframe>
+    </div>
+
+    <!-- Page 4: Dribbble -->
+    <div class="page">
+      <div class="page-overlay" data-page-info>
+        <div class="page-icon">🎨</div>
+        <h2>Dribbble</h2>
+        <p>设计师灵感天堂，创意无限</p>
+        <button class="enter-btn" data-enter>进入探索</button>
+      </div>
+      <iframe data-iframe src="about:blank" data-src="https://dribbble.com"></iframe>
+    </div>
+
+    <!-- Page 5: Awwwards -->
+    <div class="page">
+      <div class="page-overlay" data-page-info>
+        <div class="page-icon">🏆</div>
+        <h2>Awwwards</h2>
+        <p>顶尖网页设计大奖，前沿趋势</p>
+        <button class="enter-btn" data-enter>进入探索</button>
+      </div>
+      <iframe data-iframe src="about:blank" data-src="https://www.awwwards.com/websites/websites-of-the-day"></iframe>
+    </div>
+
+    <!-- Page 6: Product Hunt -->
+    <div class="page">
+      <div class="page-overlay" data-page-info>
+        <div class="page-icon">🚀</div>
+        <h2>Product Hunt</h2>
+        <p>发现最新最酷的科技产品</p>
+        <button class="enter-btn" data-enter>进入探索</button>
+      </div>
+      <iframe data-iframe src="about:blank" data-src="https://www.producthunt.com"></iframe>
+    </div>
+
+    <!-- Back Cover -->
+    <div class="page" data-density="hard">
+      <div class="page-overlay cover-back">
+        <div class="page-icon">✨</div>
+        <h2>探索未完</h2>
+        <p>更多精彩网页等你来发现<br>返回封面重新开始</p>
+        <button class="enter-btn" onclick="pageFlip && pageFlip.flip(0)">↻ 回到封面</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <button class="nav-btn" id="prevBtn" title="上一页">◀</button>
+  <div class="page-indicator">
+    第 <span id="currentPage">1</span> / <span id="totalPages">7</span> 页
+  </div>
+  <button class="nav-btn" id="nextBtn" title="下一页">▶</button>
+</div>
+
+<!-- Bookmark dots -->
+<div class="bookmarks" id="bookmarks"></div>
+
+<!-- Loading indicator -->
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  正在加载书中世界...
+</div>
+
+<!-- PageFlip library from CDN -->
+<script src="https://unpkg.com/page-flip/dist/js/page-flip.browser.js"></script>
+
+<script>
+// Generate background particles
+(function() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 4 + 2;
+    p.style.cssText = `
+      width: ${size}px;
+      height: ${size}px;
+      left: ${Math.random() * 100}%;
+      animation-duration: ${Math.random() * 15 + 10}s;
+      animation-delay: ${Math.random() * 10}s;
+    `;
+    container.appendChild(p);
+  }
+})();
+
+// Initialize PageFlip
+const pageFlip = new St.PageFlip(document.getElementById('book'), {
+  width: 800,
+  height: 560,
+  size: 'stretch',
+  minWidth: 400,
+  maxWidth: 1000,
+  minHeight: 300,
+  maxHeight: 700,
+  showCover: true,
+  mobileScrollSupport: true,
+  drawShadow: true,
+  maxShadowOpacity: 0.7,
+  flippingTime: 800,
+});
+
+// Load pages
+const pages = document.querySelectorAll('.page');
+pageFlip.loadFromHTML(pages);
+
+// Hide loading
+document.getElementById('loading').style.display = 'none';
+
+// Build bookmark dots
+const totalPageGroups = Math.ceil(pageFlip.getPageCount() / 2);
+const bookmarksEl = document.getElementById('bookmarks');
+document.getElementById('totalPages').textContent = totalPageGroups;
+
+for (let i = 0; i < totalPageGroups; i++) {
+  const dot = document.createElement('div');
+  dot.className = 'bookmark-dot' + (i === 0 ? ' active' : '');
+  dot.addEventListener('click', () => {
+    pageFlip.flip(i * 2);
+  });
+  bookmarksEl.appendChild(dot);
+}
+
+// Update page indicator and bookmarks
+function updateIndicator(pageNum) {
+  const pageGroup = Math.ceil((pageNum || 0) / 2);
+  document.getElementById('currentPage').textContent = pageGroup;
+  const dots = document.querySelectorAll('.bookmark-dot');
+  dots.forEach((d, i) => d.classList.toggle('active', i === pageGroup));
+}
+
+pageFlip.on('flip', (e) => {
+  updateIndicator(e.data);
+});
+
+// Navigation buttons
+document.getElementById('prevBtn').addEventListener('click', () => {
+  pageFlip.flipPrev();
+});
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  pageFlip.flipNext();
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') pageFlip.flipPrev();
+  if (e.key === 'ArrowRight') pageFlip.flipNext();
+});
+
+// Enter button: load iframe on demand
+document.querySelectorAll('[data-enter]').forEach(btn => {
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const page = this.closest('.page');
+    const overlay = this.closest('.page-overlay');
+    const iframe = page.querySelector('[data-iframe]');
+    if (iframe && iframe.dataset.src) {
+      overlay.style.opacity = '0';
+      setTimeout(() => { overlay.style.display = 'none'; }, 400);
+      iframe.src = iframe.dataset.src;
+    }
+  });
+});
+
+// Position glow
+const glow = document.getElementById('bookGlow');
+const bookContainer = document.getElementById('book-container');
+if (bookContainer && glow) {
+  glow.style.top = bookContainer.offsetTop - 50 + 'px';
+  glow.style.left = (bookContainer.offsetLeft + bookContainer.offsetWidth / 2 - 250) + 'px';
+}
+</script>
+
+</body>
+</html>
