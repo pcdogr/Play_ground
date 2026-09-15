@@ -78,14 +78,16 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            const elapsed = clock.getElapsedTime();
             const delta = clock.getDelta();
+            const elapsed = clock.getElapsedTime();
 
             // Update controls
             controls.update();
 
             // Update petal particles
-            updatePetals(petals, elapsed, delta || 0.016);
+            if (delta > 0) {
+                updatePetals(petals, elapsed, delta);
+            }
 
             // Gentle cherry blossom tree sway
             scene.traverse((child) => {

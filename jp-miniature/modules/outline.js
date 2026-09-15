@@ -6,22 +6,17 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-// Cel-shading (toon) shader for the main scene
+// Cel-shading (toon) shader - simplified for post-processing pipeline
 const CelShader = {
     uniforms: {
         tDiffuse: { value: null },
-        lightDir: { value: new THREE.Vector3(15, 25, 10).normalize() },
+        lightDir: { value: new THREE.Vector3(0.5, 0.8, 0.3).normalize() },
         numSteps: { value: 4.0 },
     },
     vertexShader: `
         varying vec2 vUv;
-        varying vec3 vWorldNormal;
-        varying vec3 vWorldPosition;
         void main() {
             vUv = uv;
-            vec4 worldPos = modelMatrix * vec4(position, 1.0);
-            vWorldPosition = worldPos.xyz;
-            vWorldNormal = normalize(mat3(modelMatrix) * normal);
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
     `,
@@ -30,37 +25,22 @@ const CelShader = {
         uniform vec3 lightDir;
         uniform float numSteps;
         varying vec2 vUv;
-        varying vec3 vWorldNormal;
-        varying vec3 vWorldPosition;
 
         void main() {
             vec4 color = texture2D(tDiffuse, vUv);
 
-            // Calculate NdotL
-            float NdotL = dot(vWorldNormal, lightDir);
+            // Cel-shading based on brightness
+            float brightness = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+            float stepped = floor(brightness * numSteps) / (numSteps - 1.0);
 
-            // Step function for cel-shading bands
-            float intensity = floor(NdotL * numSteps) / (numSteps - 1.0);
+            // Quantize color for toon effect
+            vec3 toonColor = vec3(stepped) * color.rgb;
+            // Blend original with toon
+            toonColor = mix(color.rgb * 0.6, color.rgb, stepped);
+            // Boost saturation slightly
+            toonColor = mix(vec3(dot(toonColor, vec3(0.299, 0.587, 0.114))), toonColor, 1.2);
 
-            // Mix lit and shadow tones
-            vec3 litColor = color.rgb;
-            vec3 shadowColor = color.rgb * 0.55;
-
-            vec3 finalColor;
-
-            if (NdotL > 0.0) {
-                finalColor = mix(litColor * 0.75, litColor, intensity);
-            } else {
-                finalColor = shadowColor;
-            }
-
-            // Rim light effect
-            vec3 viewDir = normalize(cameraPosition - vWorldPosition);
-            float rimFactor = 1.0 - max(dot(viewDir, vWorldNormal), 0.0);
-            rimFactor = smoothstep(0.5, 1.0, rimFactor);
-            finalColor += litColor * rimFactor * 0.15;
-
-            gl_FragColor = vec4(finalColor, color.a);
+            gl_FragColor = vec4(toonColor, color.a);
         }
     `,
 };
