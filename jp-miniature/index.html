@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日式乡村车站便利店微缩景观</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #87CEEB; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { initScene } from './modules/scenes.js';
+        import { setupLighting } from './modules/lighting.js';
+        import { createBase } from './modules/base.js';
+        import { createStreets } from './modules/street.js';
+        import { createRailroad } from './modules/railroad.js';
+        import { createUtilityPoles } from './modules/utility-poles.js';
+        import { createConvenienceStore } from './modules/convenience-store.js';
+        import { createVendingMachine } from './modules/vending-machine.js';
+        import { createStation } from './modules/station.js';
+        import { createTrain } from './modules/train.js';
+        import { createBicycle } from './modules/bicycle.js';
+        import { createStreetFurniture } from './modules/street-furniture.js';
+        import { createCherryBlossoms } from './modules/cherry-blossom.js';
+        import { createVegetation } from './modules/vegetation.js';
+        import { createPetalParticles, updatePetals } from './modules/petal-particles.js';
+        import { setupToonRendering, applyToonMaterial } from './modules/outline.js';
+
+        // Initialize scene
+        const { scene, camera, renderer, controls } = initScene();
+
+        // Setup lighting
+        setupLighting(scene);
+
+        // Build scene components
+        createBase(scene);
+        createStreets(scene);
+        createRailroad(scene);
+        createUtilityPoles(scene);
+        const store = createConvenienceStore(scene);
+        createVendingMachine(scene);
+        createStation(scene);
+        createTrain(scene);
+        createBicycle(scene);
+        createStreetFurniture(scene);
+        createCherryBlossoms(scene);
+        createVegetation(scene);
+
+        // Petal particles
+        const petals = createPetalParticles(scene);
+
+        // Toon rendering / outline post-processing
+        const { composer, outlinePass, celPass } = setupToonRendering(renderer, scene, camera);
+
+        // Apply toon-friendly materials to all groups
+        scene.traverse((child) => {
+            if (child.isGroup) {
+                applyToonMaterial(child);
+            }
+        });
+
+        // Animation loop
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsed = clock.getElapsedTime();
+            const delta = clock.getDelta();
+
+            // Update controls
+            controls.update();
+
+            // Update petal particles
+            updatePetals(petals, elapsed, delta || 0.016);
+
+            // Gentle cherry blossom tree sway
+            scene.traverse((child) => {
+                if (child.userData && child.userData.isCherryTree) {
+                    child.rotation.z = Math.sin(elapsed * 0.5) * 0.005;
+                    child.rotation.x = Math.cos(elapsed * 0.3) * 0.003;
+                }
+            });
+
+            // Render with post-processing
+            composer.render();
+        }
+
+        animate();
+
+        // Expose for debugging
+        window._scene = scene;
+        window._camera = camera;
+        window._renderer = renderer;
+        window._controls = controls;
+        window._composer = composer;
+        window._sceneReady = true;
+    </script>
+</body>
+</html>
