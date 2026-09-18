@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KUKRI HEAVY BUSHCRAFT // 实拍分镜沉浸式视差展示</title>
+
+  <!-- 战术野战风格字体 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            tactical: {
+              charcoal: '#121413',
+              olive: '#1c241e',
+              earth: '#1e1b18',
+              orange: '#e28743',
+              gold: '#f39c12',
+              steel: '#4b5563',
+              darker: '#0a0c0b'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Anton', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- GSAP 3.x + ScrollTrigger CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <!-- Lenis Smooth Scroll CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
+
+  <style>
+    html.lenis, html.lenis body { height: auto; }
+    .lenis.lenis-smooth { scroll-behavior: auto !important; }
+    .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+
+    /* GPU 合成层 */
+    .gpu-layer {
+      transform: translate3d(0, 0, 0);
+      will-change: transform, opacity;
+      backface-visibility: hidden;
+    }
+
+    /* 战术网格背景 */
+    .bg-topo-grid {
+      background-image: radial-gradient(rgba(226, 135, 67, 0.08) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(18, 20, 19, 0.85), rgba(18, 20, 19, 0.98));
+      background-size: 32px 32px, 100% 100%;
+    }
+
+    /* CSS Sprite 兜底裁切模式 (当有同目录 storyboard.jpg 时) */
+    .storyboard-sprite {
+      background-image: url('storyboard.jpg');
+      background-size: 300% auto;
+      background-repeat: no-repeat;
+    }
+    .crop-shot-1 { background-position: 0% 7%; }
+    .crop-shot-2 { background-position: 50% 7%; }
+    .crop-shot-3 { background-position: 100% 7%; }
+    .crop-shot-4 { background-position: 0% 93%; }
+    .crop-shot-5 { background-position: 50% 93%; }
+    .crop-shot-6 { background-position: 100% 93%; }
+
+    /* 动态金色火花 */
+    .spark-node {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: #f39c12;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #f39c12, 0 0 20px #e28743;
+      pointer-events: none;
+    }
+
+    /* 按钮流动发光描边 */
+    @keyframes borderRotate {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(45deg); }
+    }
+    .glowing-btn-border::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      background: linear-gradient(90deg, #e28743, #f39c12, #e28743);
+      border-radius: 0.5rem;
+      z-index: -1;
+      opacity: 0.8;
+      animation: borderRotate 4s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .gpu-layer, .spark-node {
+        transform: none !important;
+        transition: none !important;
+        will-change: auto !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-tactical-charcoal text-neutral-200 selection:bg-tactical-orange selection:text-black overflow-x-hidden font-sans">
+
+  <!-- 全局实拍素材拖拽载入蒙层 (Drag & Drop Zone) -->
+  <div id="drop-overlay" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md border-4 border-dashed border-tactical-orange flex flex-col items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300">
+    <div class="w-16 h-16 rounded-full bg-tactical-orange/20 border border-tactical-orange flex items-center justify-center mb-4 animate-bounce">
+      <svg class="w-8 h-8 text-tactical-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+    </div>
+    <h3 class="font-display text-2xl text-white tracking-widest">松开鼠标，载入 6 格实拍总图</h3>
+    <p class="font-mono text-xs text-neutral-400 mt-2">浏览器将自动执行高保真像素级微切，生成 6 段独立实拍分镜</p>
+  </div>
+
+  <!-- 顶部 HUD 状态栏 -->
+  <header class="fixed top-0 left-0 w-full z-40 px-6 md:px-12 py-5 flex items-center justify-between pointer-events-none backdrop-blur-md bg-tactical-charcoal/40 border-b border-white/5">
+    <div class="flex items-center gap-3 pointer-events-auto">
+      <div class="w-3 h-3 bg-tactical-orange rotate-45 animate-pulse"></div>
+      <span class="font-display tracking-widest text-lg text-white">KUKRI // LIVE-STORYBOARD</span>
+      <span class="text-xs font-mono px-2 py-0.5 rounded bg-tactical-olive border border-white/10 text-tactical-orange tracking-widest uppercase">Real Footage</span>
+    </div>
+
+    <!-- 顶部动作条：支持载入/切换实拍图片 -->
+    <div class="flex items-center gap-4 pointer-events-auto">
+      <label class="cursor-pointer px-3 py-1.5 bg-black/60 hover:bg-tactical-orange hover:text-black border border-tactical-orange/40 text-tactical-orange rounded font-mono text-xs tracking-wider transition-all flex items-center gap-2">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+        <span>更换/载入 6 格实拍图</span>
+        <input type="file" id="image-loader" accept="image/*" class="hidden" />
+      </label>
+      <span class="hidden md:inline font-mono text-xs text-neutral-400">SCENE <span id="hud-step">01</span>/06</span>
+    </div>
+  </header>
+
+  <!-- 侧边 HUD 标尺指示点 -->
+  <div class="fixed right-6 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-end gap-3 font-mono text-[10px] tracking-wider text-neutral-500 pointer-events-none">
+    <div class="hud-dot w-2 h-2 rounded-full bg-tactical-orange transition-all duration-300"></div>
+    <div class="hud-dot w-1 h-1 rounded-full bg-neutral-700 transition-all duration-300"></div>
+    <div class="hud-dot w-1 h-1 rounded-full bg-neutral-700 transition-all duration-300"></div>
+    <div class="hud-dot w-1 h-1 rounded-full bg-neutral-700 transition-all duration-300"></div>
+    <div class="hud-dot w-1 h-1 rounded-full bg-neutral-700 transition-all duration-300"></div>
+    <div class="hud-dot w-1 h-1 rounded-full bg-neutral-700 transition-all duration-300"></div>
+  </div>
+
+
+  <!-- =========================================================================
+       SECTION 1: [Bushcraft Base] - 0-2s Setting & Product
+       实拍素材：左上角镜头 (裁切：木桩立刀、野营水壶与睡垫鞋具)
+       ========================================================================= -->
+  <section id="sec-1" class="relative w-full h-screen overflow-hidden flex items-center justify-center bg-tactical-charcoal">
+    <!-- Layer 0: 慢速视差深远背景 -->
+    <div id="sec1-layer-bg" class="gpu-layer absolute inset-0 w-full h-[125%] -top-[12%] pointer-events-none bg-gradient-to-b from-[#121614] via-[#1c241e] to-[#121413]">
+      <div class="absolute inset-0 bg-topo-grid opacity-50"></div>
+    </div>
+
+    <!-- Layer 1: 实拍中景裁切图层 -->
+    <div id="sec1-layer-knife" class="gpu-layer relative z-10 w-full max-w-5xl px-6 flex flex-col items-center">
+      <div id="shot-container-1" class="storyboard-sprite crop-shot-1 relative w-full aspect-[16/10] rounded-2xl border border-white/15 overflow-hidden shadow-2xl bg-tactical-darker flex items-center justify-center group">
+        <!-- 实拍裁剪真实图片 -->
+        <img id="shot-img-1" src="" alt="0-2s Bushcraft Base 实拍分镜" class="w-full h-full object-cover object-center hidden" />
+        
+        <!-- 占位等待提示 (当未选文件时显示) -->
+        <div id="placeholder-1" class="text-center p-6 select-none pointer-events-none">
+          <div class="font-mono text-xs text-tactical-orange tracking-widest uppercase mb-1">Frame 1 // 0-2s [Setting & Product]</div>
+          <div class="font-display text-2xl text-neutral-400">BUSHCRAFT BASE</div>
+          <div class="text-[11px] font-mono text-neutral-500 mt-2">已就绪：支持同目录 storyboard.jpg 自动裁切或直接拖拽图片</div>
+        </div>
+
+        <div class="absolute bottom-4 left-6 z-20 font-mono text-xs text-tactical-orange flex items-center gap-2 bg-black/60 px-3 py-1 rounded backdrop-blur-sm">
+          <span class="w-2 h-2 rounded-full bg-tactical-orange animate-ping"></span>
+          0-2s // [BUSHCRAFT BASE]
+        </div>
+      </div>
+    </div>
+
+    <!-- Layer 2: 前景大号标题 (1.2x 快速滑出) -->
+    <div id="sec1-layer-title" class="gpu-layer absolute z-20 bottom-10 md:bottom-16 w-full px-8 text-center pointer-events-none">
+      <p class="font-mono text-tactical-orange text-xs md:text-sm tracking-[0.3em] uppercase mb-2">Segment 0-2s // Setting & Product</p>
+      <h1 class="font-display text-5xl md:text-8xl lg:text-9xl text-white tracking-widest uppercase drop-shadow-2xl">
+        BUSHCRUSH BASE
+      </h1>
+      <p class="text-neutral-400 font-mono text-xs md:text-sm tracking-widest mt-2 uppercase">Kukri Utility Heavy Chopper</p>
+    </div>
+  </section>
+
+
+  <!-- =========================================================================
+       SECTION 2: [Secure & Ready] - 2-4s Extraction
+       实拍素材：中上角镜头 (裁切：皮手套握把抽出木桩) - Pin 1000px 滚动
+       ========================================================================= -->
+  <section id="sec-2" class="relative w-full h-screen bg-tactical-olive overflow-hidden flex items-center justify-center">
+    <div class="relative w-full max-w-7xl h-full flex items-center justify-center px-6">
+      <div class="absolute inset-0 bg-topo-grid opacity-60 pointer-events-none"></div>
+
+      <!-- 中心固定视界 -->
+      <div class="relative z-10 w-full max-w-3xl aspect-[4/3] rounded-2xl border border-white/10 overflow-hidden bg-black shadow-2xl flex items-center justify-center">
+        <div id="shot-container-2" class="storyboard-sprite crop-shot-2 gpu-layer w-full h-full relative overflow-hidden flex items-center justify-center">
+          <img id="shot-img-2" src="" alt="2-4s Extraction 实拍分镜" class="w-full h-full object-cover object-center hidden" />
+          <div id="placeholder-2" class="text-center p-6 select-none pointer-events-none">
+            <div class="font-mono text-xs text-tactical-orange tracking-widest uppercase mb-1">Frame 2 // 2-4s [Extraction]</div>
+            <div class="font-display text-2xl text-neutral-400">SECURE & READY</div>
+          </div>
+        </div>
+
+        <div class="absolute bottom-6 left-6 font-mono text-xs text-tactical-orange flex items-center gap-2 bg-black/70 px-3 py-1 rounded backdrop-blur-sm">
+          <span class="w-2 h-2 rounded-full bg-tactical-orange animate-ping"></span>
+          2-4s // [SECURE & READY] EXTRACTION
+        </div>
+      </div>
+
+      <!-- 侧边交错滑入的技术规格 (stagger: 0.1s) -->
+      <div id="sec2-specs" class="absolute z-20 w-full max-w-5xl h-full flex flex-col justify-between py-24 pointer-events-none">
+        <div class="spec-card gpu-layer self-start bg-tactical-charcoal/95 border-l-2 border-tactical-orange p-4 rounded-r shadow-xl max-w-xs backdrop-blur-md">
+          <span class="font-mono text-[10px] text-tactical-orange tracking-widest block">SPEC // 01</span>
+          <h4 class="font-display text-lg text-white tracking-wider">1095 HIGH-CARBON STEEL</h4>
+          <p class="text-xs text-neutral-400 font-mono mt-1">真空淬火，58-60 HRC，承受野外重型斩击不卷刃。</p>
+        </div>
+
+        <div class="spec-card gpu-layer self-end bg-tactical-charcoal/95 border-r-2 border-tactical-orange p-4 rounded-l shadow-xl max-w-xs text-right backdrop-blur-md">
+          <span class="font-mono text-[10px] text-tactical-orange tracking-widest block">SPEC // 02</span>
+          <h4 class="font-display text-lg text-white tracking-wider">ERGONOMIC LEATHER GRIP</h4>
+          <p class="text-xs text-neutral-400 font-mono mt-1">贴合战术皮手套工学，即便高强度抽出与斩击依然不脱手。</p>
+        </div>
+
+        <div class="spec-card gpu-layer self-start bg-tactical-charcoal/95 border-l-2 border-tactical-orange p-4 rounded-r shadow-xl max-w-xs backdrop-blur-md">
+          <span class="font-mono text-[10px] text-tactical-orange tracking-widest block">SPEC // 03</span>
+          <h4 class="font-display text-lg text-white tracking-wider">FORWARD-WEIGHT INERTIA</h4>
+          <p class="text-xs text-neutral-400 font-mono mt-1">前倾重心提供强劲砍伐惯性，劈断粗木省力 40%。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- =========================================================================
+       SECTION 3: [Effortless Cleaving] - 4-6s Precision Cut
+       实拍素材：右上角镜头 (裁切：双手控刀精准切断军绿伞绳)
+       ========================================================================= -->
+  <section id="sec-3" class="relative w-full h-screen bg-tactical-charcoal overflow-hidden flex items-center justify-center">
+    <!-- 底层半透明巨大字号排版 (opacity: 0.15) -->
+    <div id="sec3-bg-typography" class="gpu-layer absolute inset-0 flex flex-col items-center justify-center whitespace-nowrap select-none pointer-events-none opacity-15">
+      <span class="font-display text-[15vw] leading-none text-white tracking-tighter">PRECISION CUT</span>
+      <span class="font-display text-[13vw] leading-none text-tactical-orange tracking-tighter">EFFORTLESS CLEAVING</span>
+    </div>
+
+    <div class="relative z-10 w-full max-w-6xl px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <!-- 左侧叙事图层 (向左微移) -->
+      <div id="sec3-left-col" class="gpu-layer lg:col-span-5 space-y-6">
+        <div class="inline-block px-3 py-1 bg-tactical-olive/60 border border-white/10 rounded font-mono text-xs text-tactical-orange tracking-widest">
+          4-6s // PRECISION CUT & CLEAVING
+        </div>
+        <h2 class="font-display text-4xl md:text-6xl text-white tracking-wider leading-tight">
+          极速推削 <br /><span class="text-tactical-orange">微距伞绳断层</span>
+        </h2>
+        <p class="text-neutral-400 text-sm md:text-base leading-relaxed">
+          弧形斩腹亦兼备推削刀刃精度。军规 550 多股伞绳置于切块之上，下压推削瞬间利落分离，切口平整毫无拉丝。
+        </p>
+        <div class="grid grid-cols-2 gap-4 pt-2 font-mono text-xs">
+          <div class="p-3 bg-black/40 border border-white/5 rounded">
+            <span class="text-neutral-500 block">EDGE BEVEL</span>
+            <span class="text-white text-sm font-bold">22° CONVEX RAZOR</span>
+          </div>
+          <div class="p-3 bg-black/40 border border-white/5 rounded">
+            <span class="text-neutral-500 block">PARACORD TEST</span>
+            <span class="text-white text-sm font-bold">MIL-SPEC 550 CORD</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧实拍素材 3 裁切 (向右平移) -->
+      <div id="sec3-right-col" class="gpu-layer lg:col-span-7 relative">
+        <div id="shot-container-3" class="storyboard-sprite crop-shot-3 relative aspect-[16/10] rounded-xl overflow-hidden border border-tactical-orange/30 shadow-2xl bg-black flex items-center justify-center">
+          <img id="shot-img-3" src="" alt="4-6s Precision Cut 实拍分镜" class="w-full h-full object-cover object-center hidden" />
+          <div id="placeholder-3" class="text-center p-6 select-none pointer-events-none">
+            <div class="font-mono text-xs text-tactical-orange tracking-widest uppercase mb-1">Frame 3 // 4-6s [Precision Cut]</div>
+            <div class="font-display text-2xl text-neutral-400">EFFORTLESS CLEAVING</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- =========================================================================
+       SECTION 4: [Ferro Rod Spine] - 6-8s Utility Sparks
+       实拍素材：左下角镜头 (裁切：90°刀脊下刮打火石迸发火星)
+       ========================================================================= -->
+  <section id="sec-4" class="relative w-full h-screen bg-tactical-earth overflow-hidden flex items-center justify-center">
+    <!-- 瞬态强光闪烁层 -->
+    <div id="sec4-flash-light" class="gpu-layer absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-75"
+         style="background: radial-gradient(circle at 65% 50%, rgba(243, 156, 18, 0.5) 0%, rgba(226, 135, 67, 0.25) 40%, transparent 70%);">
+    </div>
+
+    <!-- 15 个金色火星粒子容器 -->
+    <div id="sec4-sparks-container" class="absolute inset-0 pointer-events-none z-30 overflow-hidden"></div>
+
+    <div class="relative z-20 w-full max-w-6xl px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      <!-- 左侧：功能说明 -->
+      <div class="space-y-6">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-tactical-orange/10 border border-tactical-orange/40 rounded font-mono text-xs text-tactical-gold tracking-widest">
+          <span class="w-2 h-2 rounded-full bg-tactical-gold animate-bounce"></span>
+          6-8s // UTILITY: SPARKS
+        </div>
+        <h2 class="font-display text-4xl md:text-7xl text-white tracking-wider">
+          90° 直角刀脊 <br /><span class="text-tactical-gold">漫天火星迸发</span>
+        </h2>
+        <p class="text-neutral-300 text-sm md:text-base leading-relaxed font-sans">
+          刀背未经倒角的垂直 90° 棱边，配合镁棒可瞬间刮擦出密集的高热火花雨。即使在潮湿风雨林地中，也能迅速点燃救命火绒。
+        </p>
+        <div class="flex items-center gap-6 font-mono text-xs text-neutral-400">
+          <div><strong class="text-white text-base block font-display">90° ANGLE</strong> SPINE SCRAPER</div>
+          <div class="w-px h-8 bg-white/10"></div>
+          <div><strong class="text-white text-base block font-display">3000°C</strong> PYRO SHOWER</div>
+        </div>
+      </div>
+
+      <!-- 右侧实拍素材 4 裁切 (打火石火花特写) -->
+      <div id="sec4-blade-strike" class="gpu-layer relative aspect-square rounded-2xl overflow-hidden border border-tactical-gold/30 shadow-2xl bg-black flex items-center justify-center">
+        <div id="shot-container-4" class="storyboard-sprite crop-shot-4 w-full h-full relative overflow-hidden flex items-center justify-center">
+          <img id="shot-img-4" src="" alt="6-8s Sparks 实拍分镜" class="w-full h-full object-cover object-center hidden" />
+          <div id="placeholder-4" class="text-center p-6 select-none pointer-events-none">
+            <div class="font-mono text-xs text-tactical-orange tracking-widest uppercase mb-1">Frame 4 // 6-8s [Utility: Sparks]</div>
+            <div class="font-display text-2xl text-neutral-400">FERRO ROD SPINE</div>
+          </div>
+        </div>
+        <div class="absolute top-4 right-4 px-3 py-1 bg-tactical-charcoal/90 border border-tactical-gold/50 rounded font-mono text-[10px] text-tactical-gold">
+          PYROTECHNIC IGNITION
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- =========================================================================
+       SECTION 5: [Perfect Fit] - 8-9s Sheathing
+       实拍素材：中下角镜头 (裁切：双手持握战术护套回鞘)
+       ========================================================================= -->
+  <section id="sec-5" class="relative w-full h-screen bg-tactical-olive overflow-hidden flex items-center justify-center">
+    <div class="relative z-10 w-full max-w-6xl px-6 flex flex-col items-center">
+      
+      <div class="text-center mb-8">
+        <p class="font-mono text-xs text-tactical-orange tracking-[0.25em] uppercase">8-9s // TACTICAL SHEATHING</p>
+        <h2 class="font-display text-4xl md:text-7xl text-white tracking-wider mt-1">PERFECT FIT & LOCK</h2>
+        <p class="font-mono text-xs text-neutral-400 mt-2">防跌落机械按扣与加固战术护套回纳</p>
+      </div>
+
+      <!-- 护套与刀身回纳交互区 -->
+      <div class="relative w-full max-w-3xl aspect-[16/9] rounded-2xl border border-white/10 overflow-hidden bg-black shadow-2xl flex items-center justify-center">
+        <div id="shot-container-5" class="storyboard-sprite crop-shot-5 gpu-layer w-full h-full relative overflow-hidden flex items-center justify-center">
+          <img id="shot-img-5" src="" alt="8-9s Sheathing 实拍分镜" class="w-full h-full object-cover object-center hidden" />
+          <div id="placeholder-5" class="text-center p-6 select-none pointer-events-none">
+            <div class="font-mono text-xs text-tactical-orange tracking-widest uppercase mb-1">Frame 5 // 8-9s [Sheathing]</div>
+            <div class="font-display text-2xl text-neutral-400">PERFECT FIT</div>
+          </div>
+        </div>
+
+        <div id="sec5-lock-indicator" class="gpu-layer absolute bottom-6 right-8 bg-black/85 border border-tactical-orange/40 rounded-lg p-3 backdrop-blur-md flex items-center gap-3">
+          <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+          <div>
+            <div class="font-mono text-[10px] text-neutral-400">RETENTION STATUS</div>
+            <div class="font-mono text-xs text-white font-bold tracking-widest">LOCKED // SECURE 100%</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- =========================================================================
+       SECTION 6: [Pack Up & Ready] - 9-10s Complete Tool & CTA
+       实拍素材：右下角镜头 (裁切：刀套、等高线地图、黄铜指北针、打火石平铺 Knolling)
+       ========================================================================= -->
+  <section id="sec-6" class="relative w-full min-h-screen py-24 bg-tactical-charcoal overflow-hidden flex flex-col items-center justify-center">
+    
+    <div id="sec6-knolling-container" class="gpu-layer w-full max-w-5xl px-6 mb-12">
+      <div class="text-center mb-8">
+        <span class="font-mono text-xs text-tactical-orange tracking-widest uppercase">9-10s // Ready For Deployment</span>
+        <h2 class="font-display text-4xl md:text-7xl text-white tracking-widest uppercase mt-1">THE COMPLETE SYSTEM</h2>
+        <p class="font-mono text-xs text-neutral-400 mt-2">入鞘砍刀、军用指北针、地形等高线图与火石全套集结</p>
+      </div>
+
+      <!-- 实拍素材 6 裁切展示区 -->
+      <div class="w-full aspect-[16/10] rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black flex items-center justify-center">
+        <div id="shot-container-6" class="storyboard-sprite crop-shot-6 w-full h-full relative overflow-hidden flex items-center justify-center">
+          <img id="shot-img-6" src="" alt="9-10s Pack Up & Ready 实拍分镜" class="w-full h-full object-cover object-center hidden" />
+          <div id="placeholder-6" class="text-center p-6 select-none pointer-events-none">
+            <div class="font-mono text-xs text-tactical-orange tracking-widest uppercase mb-1">Frame 6 // 9-10s [Pack Up & Ready]</div>
+            <div class="font-display text-2xl text-neutral-400">YOUR COMPLETE SURVIVAL TOOL</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 最终行动号召 (CTA) 卡片 -->
+    <div id="sec6-cta-card" class="gpu-layer relative z-20 w-full max-w-3xl mx-auto px-6">
+      <div class="p-8 md:p-12 rounded-2xl bg-gradient-to-b from-tactical-olive/90 to-tactical-charcoal/95 border border-tactical-orange/40 shadow-2xl text-center backdrop-blur-xl">
+        <span class="inline-block px-3 py-1 bg-tactical-orange/20 text-tactical-orange border border-tactical-orange/40 rounded font-mono text-xs tracking-widest uppercase mb-4">
+          Ready For The Wild // Final Mission
+        </span>
+        <h3 class="font-display text-3xl md:text-5xl text-white tracking-widest uppercase leading-tight mb-4">
+          YOUR ULTIMATE BUSHCRAFT SURVIVAL TOOL
+        </h3>
+        <p class="text-neutral-400 font-sans text-sm md:text-base max-w-xl mx-auto mb-8 leading-relaxed">
+          基于 6 段野外实测分镜研发：从拔刀重劈、推削伞绳、刀脊生火到快拔收鞘，打造野外全地形终极工具。
+        </p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <button class="glowing-btn-border relative w-full sm:w-auto px-8 py-4 bg-tactical-orange text-black font-display tracking-widest text-lg uppercase rounded-lg hover:bg-tactical-gold transition-all duration-300">
+            立即订购终极砍刀套装 // $189
+          </button>
+          <button class="w-full sm:w-auto px-8 py-4 bg-black/60 border border-white/20 text-white font-mono text-xs tracking-widest uppercase rounded-lg hover:border-tactical-orange hover:text-tactical-orange transition-all duration-300">
+            查看完整技术规格表
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- 页脚 -->
+  <footer class="w-full py-8 border-t border-white/5 bg-tactical-darker text-center font-mono text-xs text-neutral-600">
+    <p>© 2026 KUKRI BUSHCRAFT FORGE. REAL FOOTAGE STORYBOARD RECREATION.</p>
+  </footer>
+
+
+  <!-- =========================================================================
+       自动图片裁切引擎与 GSAP + Lenis 控制
+       ========================================================================= -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // -------------------------------------------------------------
+      // 1. 高保真 Canvas 自动像素级裁切引擎 (基于用户 2x3 网格原图)
+      // -------------------------------------------------------------
+      function cropStoryboardMaster(img) {
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+
+        // 6 个镜头的精确相对坐标 (剔除上下文本条，提取纯实拍照片区)
+        const cropConfigs = [
+          { id: 1, sx: 0,           sy: h * 0.055, sw: w / 3, sh: h * 0.36 }, // 0-2s Bushcraft Base
+          { id: 2, sx: w / 3,       sy: h * 0.055, sw: w / 3, sh: h * 0.36 }, // 2-4s Extraction
+          { id: 3, sx: (w * 2) / 3, sy: h * 0.055, sw: w / 3, sh: h * 0.36 }, // 4-6s Precision Cut
+          { id: 4, sx: 0,           sy: h * 0.565, sw: w / 3, sh: h * 0.35 }, // 6-8s Sparks
+          { id: 5, sx: w / 3,       sy: h * 0.565, sw: w / 3, sh: h * 0.35 }, // 8-9s Sheathing
+          { id: 6, sx: (w * 2) / 3, sy: h * 0.565, sw: w / 3, sh: h * 0.35 }, // 9-10s Knolling Pack Up
+        ];
+
+        cropConfigs.forEach(item => {
+          const canvas = document.createElement("canvas");
+          canvas.width = item.sw;
+          canvas.height = item.sh;
+          const ctx = canvas.getContext("2d");
+
+          // 核心截取
+          ctx.drawImage(img, item.sx, item.sy, item.sw, item.sh, 0, 0, item.sw, item.sh);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+
+          const imgEl = document.getElementById(`shot-img-${item.id}`);
+          const placeholderEl = document.getElementById(`placeholder-${item.id}`);
+          const containerEl = document.getElementById(`shot-container-${item.id}`);
+
+          if (imgEl) {
+            imgEl.src = dataUrl;
+            imgEl.classList.remove("hidden");
+          }
+          if (placeholderEl) {
+            placeholderEl.classList.add("hidden");
+          }
+          if (containerEl) {
+            containerEl.classList.remove("storyboard-sprite");
+          }
+        });
+      }
+
+      // 文件选择与自动裁切监听
+      const fileInput = document.getElementById("image-loader");
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) loadFileAsMaster(file);
+      });
+
+      // 全屏拖拽 (Drag & Drop) 裁切支持
+      const dropOverlay = document.getElementById("drop-overlay");
+      window.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropOverlay.classList.remove("opacity-0", "pointer-events-none");
+      });
+      window.addEventListener("dragleave", (e) => {
+        if (e.relatedTarget === null) {
+          dropOverlay.classList.add("opacity-0", "pointer-events-none");
+        }
+      });
+      window.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropOverlay.classList.add("opacity-0", "pointer-events-none");
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          loadFileAsMaster(e.dataTransfer.files[0]);
+        }
+      });
+
+      function loadFileAsMaster(file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => cropStoryboardMaster(img);
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      // 默认尝试自动加载同目录下的 storyboard.jpg
+      const defaultImg = new Image();
+      defaultImg.onload = () => cropStoryboardMaster(defaultImg);
+      defaultImg.src = "./storyboard.jpg";
+
+
+      // -------------------------------------------------------------
+      // 2. Lenis 平滑滚动引擎
+      // -------------------------------------------------------------
+      const lenis = new Lenis({
+        duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+      });
+
+      gsap.registerPlugin(ScrollTrigger);
+      lenis.on('scroll', ScrollTrigger.update);
+      gsap.ticker.add((time) => { lenis.raf(time * 1000); });
+      gsap.ticker.lagSmoothing(0);
+
+
+      // -------------------------------------------------------------
+      // 3. 6 个实拍分镜的视差滚动动画 (全部走 GPU translate3d)
+      // -------------------------------------------------------------
+      // Section 1: Bushcraft Base
+      const tl1 = gsap.timeline({
+        scrollTrigger: { trigger: "#sec-1", start: "top top", end: "bottom top", scrub: 0.8 }
+      });
+      tl1.to("#sec1-layer-bg", { yPercent: 18, ease: "none" }, 0);
+      tl1.to("#sec1-layer-knife", { scale: 1.08, yPercent: 8, ease: "none" }, 0);
+      tl1.to("#sec1-layer-title", { yPercent: -120, opacity: 0, ease: "power1.in" }, 0);
+
+      // Section 2: Extraction Pin 钉住
+      const tl2 = gsap.timeline({
+        scrollTrigger: { trigger: "#sec-2", start: "top top", end: "+=1000", pin: true, scrub: 0.6 }
+      });
+      tl2.to("#shot-container-2", { scale: 1.05, y: -20, ease: "power1.out", duration: 1 }, 0);
+      tl2.from(".spec-card", {
+        x: (i) => (i % 2 === 0 ? -80 : 80),
+        opacity: 0,
+        stagger: 0.15,
+        duration: 1,
+        ease: "power2.out"
+      }, 0.3);
+
+      // Section 3: Precision Cut 水平反向视差
+      const tl3 = gsap.timeline({
+        scrollTrigger: { trigger: "#sec-3", start: "top bottom", end: "bottom top", scrub: 1 }
+      });
+      tl3.to("#sec3-bg-typography", { xPercent: -8, ease: "none" }, 0);
+      tl3.to("#sec3-left-col", { xPercent: -6, ease: "none" }, 0);
+      tl3.to("#sec3-right-col", { xPercent: 6, ease: "none" }, 0);
+
+      // Section 4: Sparks 打火石刮擦与火花
+      const sparkContainer = document.getElementById("sec4-sparks-container");
+      const sparkElements = [];
+      for (let i = 0; i < 15; i++) {
+        const spark = document.createElement("div");
+        spark.classList.add("spark-node");
+        spark.style.left = `${52 + Math.random() * 16}%`;
+        spark.style.top = `${52 + Math.random() * 16}%`;
+        sparkContainer.appendChild(spark);
+        sparkElements.push(spark);
+      }
+      const tl4 = gsap.timeline({
+        scrollTrigger: { trigger: "#sec-4", start: "top center", end: "bottom center", scrub: 0.5 }
+      });
+      tl4.to("#sec4-flash-light", { opacity: 0.95, duration: 0.3, yoyo: true, repeat: 1, ease: "rough" }, 0.2);
+      sparkElements.forEach((s, idx) => {
+        tl4.to(s, {
+          x: (Math.random() - 0.5) * 500,
+          y: - (window.innerHeight * 0.75 + Math.random() * 200),
+          scale: Math.random() * 2.5 + 0.5,
+          opacity: 0,
+          ease: "power3.out",
+          duration: 1.2
+        }, 0.2 + (idx * 0.02));
+      });
+
+      // Section 5: Sheathing 机械嵌合回弹
+      const tl5 = gsap.timeline({
+        scrollTrigger: { trigger: "#sec-5", start: "top 60%", end: "center center", scrub: 0.8 }
+      });
+      tl5.fromTo("#shot-container-5",
+        { x: -30, y: -25, opacity: 0.6 },
+        { x: 0, y: 0, opacity: 1, ease: "back.out(2)", duration: 1.5 }
+      );
+      tl5.from("#sec5-lock-indicator", { scale: 0.8, opacity: 0, ease: "power2.out", duration: 0.5 }, "-=0.3");
+
+      // Section 6: Pack Up & CTA
+      const tl6 = gsap.timeline({
+        scrollTrigger: { trigger: "#sec-6", start: "top 70%", end: "center center", scrub: 0.8 }
+      });
+      tl6.from("#sec6-knolling-container", { scale: 1.05, opacity: 0.7, ease: "power2.out", duration: 1 }, 0);
+      tl6.from("#sec6-cta-card", { y: 60, opacity: 0, scale: 0.95, ease: "power3.out", duration: 1 }, 0.3);
+
+      // HUD 指示器
+      const hudStep = document.getElementById("hud-step");
+      const hudDots = document.querySelectorAll(".hud-dot");
+      ["#sec-1", "#sec-2", "#sec-3", "#sec-4", "#sec-5", "#sec-6"].forEach((secId, i) => {
+        ScrollTrigger.create({
+          trigger: secId,
+          start: "top center",
+          end: "bottom center",
+          onEnter: () => updateHud(i),
+          onEnterBack: () => updateHud(i)
+        });
+      });
+      function updateHud(index) {
+        if (hudStep) hudStep.textContent = `0${index + 1}`;
+        hudDots.forEach((dot, dotIdx) => {
+          if (dotIdx === index) {
+            dot.classList.add("bg-tactical-orange", "w-2", "h-2");
+            dot.classList.remove("bg-neutral-700", "w-1", "h-1");
+          } else {
+            dot.classList.remove("bg-tactical-orange", "w-2", "h-2");
+            dot.classList.add("bg-neutral-700", "w-1", "h-1");
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
