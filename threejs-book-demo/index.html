@@ -331,9 +331,9 @@ BOOKS.forEach((b, i) => {
 });
 scene.add(bookGroup);
 
-/* ─── 第二层架摆件（小书 / 盆栽 / 闹钟 / 相框） ─── */
+/* ─── 第二层架摆件（小书 / 盆栽 / 闹钟 / 相框，紧贴架面 y=3.56） ─── */
 {
-  const yB = 3.65;
+  const yB = 3.57;
   const mini = (x, col, h) => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(0.32, h, 0.55), new THREE.MeshStandardMaterial({ color: col, roughness: 0.6 }));
     m.position.set(x, yB + h / 2 + 0.02, 0.1);
