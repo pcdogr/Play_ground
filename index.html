@@ -1,204 +1,423 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="scroll-smooth">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📚 3D Bookshelf Projects</title>
+<title>PCDOGR · PLAY_GROUND — 交互作品集</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+:root {
+  --bg: #0d0f12;
+  --panel: rgba(255,255,255,0.035);
+  --panel-hi: rgba(255,255,255,0.06);
+  --line: rgba(255,255,255,0.09);
+  --line-hi: rgba(255,255,255,0.18);
+  --text: #e8eaf0;
+  --muted: rgba(224,234,240,0.5);
+  --dim: rgba(224,234,240,0.3);
+  --accent: #e65100;
+  --accent-soft: rgba(230,81,0,0.14);
+}
+
+html { scroll-behavior: smooth; }
+
 body {
-  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 40%, #2d1b4e 100%);
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 视差背景层 ---------- */
+.bg-layer {
+  position: fixed; inset: -8%;
+  pointer-events: none; z-index: 0;
+}
+.bg-a {
+  background:
+    radial-gradient(1200px 800px at 18% 8%, rgba(230,81,0,0.10), transparent 60%),
+    radial-gradient(900px 700px at 85% 22%, rgba(102,126,234,0.10), transparent 60%),
+    radial-gradient(1100px 900px at 40% 115%, rgba(118,75,162,0.12), transparent 60%);
+}
+.bg-b {
+  background:
+    radial-gradient(220px 220px at 12% 30%, rgba(255,255,255,0.02), transparent 70%),
+    radial-gradient(160px 160px at 88% 68%, rgba(230,81,0,0.05), transparent 70%),
+    radial-gradient(260px 260px at 76% 15%, rgba(102,126,234,0.05), transparent 70%);
+}
+
+/* ---------- 网格纹理 ---------- */
+.grid-overlay {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: radial-gradient(ellipse 120% 90% at 50% 10%, black 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse 120% 90% at 50% 10%, black 20%, transparent 75%);
+}
+
+/* ---------- 主体 ---------- */
+.wrap {
+  position: relative; z-index: 1;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 96px 24px 120px;
+}
+
+/* 顶部标签 */
+.tag {
+  display: inline-flex; align-items: center; gap: 10px;
+  font: 600 0.7rem/1 'SF Mono', ui-monospace, monospace;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+  text-transform: uppercase;
+  border: 1px solid rgba(230,81,0,0.35);
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: rgba(230,81,0,0.07);
+  margin-bottom: 26px;
+}
+.tag::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(230,81,0,0.9);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
 }
 
 h1 {
-  font-size: 2.5rem;
+  font-size: clamp(2.6rem, 7vw, 4.6rem);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  margin-bottom: 14px;
+}
+h1 .mono {
+  font-family: 'SF Mono', ui-monospace, monospace;
   font-weight: 700;
-  margin-bottom: 8px;
-  background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-align: center;
+  font-size: 0.52em;
+  color: var(--accent);
+  margin-right: 14px;
+  vertical-align: super;
+  display: inline-block;
 }
+h1 .accent { color: var(--accent); }
+h1 .thin { font-weight: 200; opacity: 0.9; }
 
-.subtitle {
-  color: rgba(255,255,255,0.4);
-  font-size: 1rem;
-  margin-bottom: 48px;
-  text-align: center;
+.sub {
+  max-width: 640px;
+  font-size: 1.02rem;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 40px;
 }
+.sub a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 
+/* 统计条 */
+.stats {
+  display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 52px;
+}
+.stat {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 14px;
+  background: var(--panel);
+}
+.stat b { color: var(--text); font-weight: 700; font-size: 1rem; }
+.stat .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.stat .dot.green { background: #34d399; }
+.stat .dot.blue { background: #60a5fa; }
+
+/* ---------- 卡片 ---------- */
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 24px;
-  max-width: 760px;
-  width: 100%;
+  gap: 22px;
 }
 
 .card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 16px;
-  padding: 32px;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  cursor: pointer;
   position: relative;
+  display: block;
   overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  cursor: pointer;
+  transition: transform .35s cubic-bezier(.16,1,.3,1), border-color .35s, box-shadow .35s;
+  will-change: transform;
 }
+.card:hover {
+  transform: translateY(-6px);
+  border-color: var(--line-hi);
+  box-shadow: 0 24px 70px rgba(0,0,0,0.5), 0 0 0 1px rgba(230,81,0,0.12);
+}
+.card:hover .arrow { color: var(--text); gap: 10px; transform: translateX(4px); }
+.card:hover .thumb { transform: scale(1.05); }
+.card:hover .icon { transform: scale(1.08) rotate(-4deg); }
 
 .card::before {
   content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: radial-gradient(ellipse at top, rgba(255,255,255,0.03) 0%, transparent 60%);
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at 20% 0%, rgba(255,255,255,0.04), transparent 60%);
   pointer-events: none;
 }
 
-.card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(255,255,255,0.15);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+.card:nth-child(1) { --c: #667eea; --c-soft: rgba(102,126,234,.14); }
+.card:nth-child(2) { --c: #60a5fa; --c-soft: rgba(96,165,250,.14); }
+.card:nth-child(3) { --c: #f472b6; --c-soft: rgba(244,114,182,.14); }
+.card:nth-child(4) { --c: #e65100; --c-soft: rgba(230,81,0,.14); }
+
+.card .topbar {
+  position: absolute; inset: auto 0 0 0;
+  height: 3px; left: 0; width: 0;
+  background: var(--c);
+  border-radius: 18px 18px 0 0;
+  transition: width .5s cubic-bezier(.16,1,.3,1);
+}
+.card:hover .topbar { width: 100%; }
+
+/* 缩略图区域 */
+.thumb {
+  position: relative;
+  height: 190px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(135deg, var(--c-soft), transparent 55%),
+    linear-gradient(rgba(255,255,255,0.03), transparent);
+  transition: transform .6s cubic-bezier(.16,1,.3,1);
+}
+.thumb::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(circle at 30% 40%, black 30%, transparent 75%);
+  mask-image: radial-gradient(circle at 30% 40%, black 30%, transparent 75%);
+}
+.card:nth-child(4) .thumb { background: url('storyboard.jpg') center/cover; }
+.card:nth-child(4) .thumb::after { display: none; }
+.card:nth-child(4) .thumb .photo-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(13,15,18,0.15) 0%, rgba(13,15,18,0.75) 70%, rgba(13,15,18,0.85) 100%);
 }
 
-.card-icon {
-  font-size: 3rem;
-  margin-bottom: 16px;
-  display: block;
+.icon {
+  font-size: 4.2rem;
+  line-height: 1;
+  position: relative; z-index: 1;
+  filter: drop-shadow(0 14px 24px rgba(0,0,0,0.5));
+  transition: transform .5s cubic-bezier(.16,1,.3,1);
 }
 
-.card h2 {
-  font-size: 1.3rem;
-  font-weight: 600;
+/* 内容区 */
+.body { padding: 24px; }
+.row {
+  display: flex; align-items: baseline; gap: 10px;
   margin-bottom: 8px;
 }
-
-.card .card-tech {
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.35);
-  margin-bottom: 12px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+.badge {
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--c);
+  background: var(--c-soft);
+  border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.t1 { font-size: 1.28rem; font-weight: 700; letter-spacing: -0.01em; }
+.t2 {
+  font-size: 0.78rem; color: var(--muted);
+  font-family: 'SF Mono', ui-monospace, monospace;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.desc {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.65;
+  margin-bottom: 16px;
+}
+.arrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.86rem; font-weight: 600;
+  color: var(--dim);
+  transition: all .3s cubic-bezier(.16,1,.3,1);
 }
 
-.card p {
-  font-size: 0.9rem;
-  color: rgba(255,255,255,0.5);
-  line-height: 1.6;
-}
-
-.card .arrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 16px;
-  font-size: 0.85rem;
-  color: rgba(255,255,255,0.3);
-  transition: all 0.3s;
-}
-
-.card:hover .arrow {
-  color: rgba(255,255,255,0.7);
-  gap: 10px;
-}
-
-.card a {
-  text-decoration: none;
-  color: inherit;
-  display: block;
-}
-
-/* Card accent colors */
-.card:nth-child(1) { border-top: 2px solid rgba(102, 126, 234, 0.3); }
-.card:nth-child(2) { border-top: 2px solid rgba(240, 147, 251, 0.3); }
-.card:nth-child(3) { border-top: 2px solid rgba(255, 182, 193, 0.4); }
-
-/* Footer */
-.footer {
-  margin-top: 48px;
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.2);
-}
-
-.footer a {
-  color: rgba(255,255,255,0.35);
-  text-decoration: none;
-}
-
-.footer a:hover {
-  color: rgba(255,255,255,0.6);
-}
-
-/* Responsive */
+/* 移动端 */
 @media (max-width: 600px) {
-  h1 { font-size: 1.8rem; }
-  .cards { grid-template-columns: 1fr; }
-  .card { padding: 24px; }
+  .wrap { padding-top: 64px; }
+  .t2 { display: none; }
+  .thumb { height: 150px; }
 }
-
 </style>
 </head>
 <body>
 
-<h1>📚 3D Bookshelf Projects</h1>
-<p class="subtitle">交互式 3D 与微缩场景作品集</p>
+<div class="bg-layer bg-a" data-depth="0.12"></div>
+<div class="bg-layer bg-b" data-depth="0.35"></div>
+<div class="grid-overlay"></div>
 
-<div class="cards">
-  <!-- Card 1: StPageFlip -->
-  <div class="card">
-    <a href="flipbook-demo/index.html">
-      <span class="card-icon">📖</span>
-      <h2>方案三：2D 翻页书</h2>
-      <div class="card-tech">StPageFlip · page-flip · Canvas</div>
-      <p>
-        逼真的 2D 书页翻动效果，每页嵌入不同网页的 iframe。
-        支持触摸滑动、键盘导航、软/硬页区分，翻页带真实阴影。
-      </p>
-      <div class="arrow">打开体验 →</div>
-    </a>
+<div class="wrap">
+
+  <div class="tag">pcdogr / play_ground</div>
+  <h1>PLAY_GROUND <span class="mono">v2.0</span><br>交互<span class="accent">视差</span>·<span class="thin">3D</span>·微缩 作品集</h1>
+  <p class="sub">
+    这里收集我在 GitHub Pages 上部署的四个交互实验 —— 从真书翻页到日式乡村微缩场景，
+    每个都可以点开体验。喜欢哪个就深入看看，想加新作品随时来找我。
+  </p>
+
+  <div class="stats">
+    <div class="stat"><span class="dot"></span><b>4</b> 项目在线</div>
+    <div class="stat"><span class="dot green"></span><b>3</b> Three.js 场景</div>
+    <div class="stat"><span class="dot blue"></span><b>16</b> 模块化 JS 文件</div>
+    <div class="stat">🌐 GitHub Pages · 全球 CDN</div>
   </div>
 
-  <!-- Card 2: Three.js -->
-  <div class="card">
-    <a href="threejs-book-demo/index.html">
-      <span class="card-icon">🎮</span>
-      <h2>方案四：3D 书架</h2>
-      <div class="card-tech">Three.js · WebGL · OrbitControls</div>
-      <p>
-        真 3D 书架场景，多本书排列在书架上。鼠标悬停书本浮起发光，
-        点击翻开弹出网页。支持拖拽旋转、滚轮缩放，书本入场动画。
-      </p>
-      <div class="arrow">打开体验 →</div>
+  <div class="cards">
+
+    <!-- 方案三 StPageFlip -->
+    <a class="card reveal" href="flipbook-demo/index.html">
+      <div class="topbar"></div>
+      <div class="thumb"><span class="icon">📖</span></div>
+      <div class="body">
+        <div class="row">
+          <span class="badge">2D FLIP</span>
+          <span class="t2">StPageFlip</span>
+        </div>
+        <div class="row"><h2 class="t1">方案三 · 2D 翻页书</h2></div>
+        <p class="desc">
+          逼真的 2D 书页翻动，每页内嵌不同网页（Wikipedia / HN / GitHub / Awwwards 等）。
+          支持触摸滑动、键盘翻页、软/硬页与真实投影。
+        </p>
+        <span class="arrow">打开体验 →</span>
+      </div>
     </a>
+
+    <!-- 方案四 Three.js 书架 -->
+    <a class="card reveal" href="threejs-book-demo/index.html">
+      <div class="topbar"></div>
+      <div class="thumb"><span class="icon">🎮</span></div>
+      <div class="body">
+        <div class="row">
+          <span class="badge">WEBGL</span>
+          <span class="t2">Three.js 0.170</span>
+        </div>
+        <div class="row"><h2 class="t1">方案四 · 3D 书架</h2></div>
+        <p class="desc">
+          真 3D 书架场景：悬停书本浮起发光、点击翻开弹出网页。
+          支持拖拽旋转、滚轮缩放与书本入场动画。
+        </p>
+        <span class="arrow">打开体验 →</span>
+      </div>
+    </a>
+
+    <!-- 日式微缩景观 -->
+    <a class="card reveal" href="jp-miniature/index.html">
+      <div class="topbar"></div>
+      <div class="thumb"><span class="icon">🌸</span></div>
+      <div class="body">
+        <div class="row">
+          <span class="badge">CEL-SHADING</span>
+          <span class="t2">16 模块</span>
+        </div>
+        <div class="row"><h2 class="t1">日式乡村车站微缩景观</h2></div>
+        <p class="desc">
+          便利店、复古电车、铁轨、樱花树、自动贩卖机、自行车、邮局……
+          二渲二卡通渲染 + 花瓣粒子飘落，春日街角微缩收藏模型。
+        </p>
+        <span class="arrow">打开体验 →</span>
+      </div>
+    </a>
+
+    <!-- KUKRI 视差分镜 -->
+    <a class="card reveal" href="kukri-storyboard.html">
+      <div class="topbar"></div>
+      <div class="thumb">
+        <span class="photo-overlay"></span>
+        <span class="icon">🔪</span>
+      </div>
+      <div class="body">
+        <div class="row">
+          <span class="badge">GSAP · PARALLAX</span>
+          <span class="t2">Lenis 滚动</span>
+        </div>
+        <div class="row"><h2 class="t1">KUKRI Heavy Bushcraft 分镜</h2></div>
+        <p class="desc">
+          战术野战风格沉浸式视差展示。6 段分镜滚动动画（GSAP + ScrollTrigger）、
+          Lenis 平滑滚动、Canvas 实拍图自动裁切，支持拖拽换图。
+        </p>
+        <span class="arrow">打开体验 →</span>
+      </div>
+    </a>
+
   </div>
 
-  <!-- Card 3: Japanese Miniature Scene -->
-  <div class="card">
-    <a href="jp-miniature/index.html">
-      <span class="card-icon">🌸</span>
-      <h2>日式乡村车站微缩景观</h2>
-      <div class="card-tech">Three.js · Cel-shading · 16 模块</div>
-      <p>
-        便利店、复古电车、铁轨、樱花树、自动贩卖机、自行车、邮局...
-        二渲二卡通渲染 + 花瓣粒子飘落，春日街角微缩收藏模型。
-      </p>
-      <div class="arrow">打开体验 →</div>
+  <footer style="margin-top:56px; padding-top:28px; border-top:1px solid var(--line);
+                display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px;
+                font-size:0.78rem; color:var(--dim);">
+    <span>Built with ❤️ · pcdogr</span>
+    <a href="https://github.com/pcdogr/Play_ground" target="_blank" style="color:var(--muted); text-decoration:none;">
+      源码 on GitHub →
     </a>
-  </div>
+  </footer>
+
 </div>
 
-<div class="footer">
-  <p>Built with ❤️ · <a href="https://github.com/pcdogr/Play_ground" target="_blank">Source on GitHub</a></p>
-</div>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+/* 视差背景层随滚动位移 */
+document.querySelectorAll('.bg-layer').forEach(el => {
+  const depth = parseFloat(el.dataset.depth) || 0.2;
+  gsap.to(el, {
+    yPercent: -depth * 25,
+    ease: "linear",
+    trigger: ScrollTrigger.create({ trigger: window, start: "top top", end: "bottom bottom" })
+  });
+});
+
+/* 标题块入场 */
+gsap.from('.tag, h1, .sub', {
+  y: 24, opacity: 0,
+  duration: 0.8,
+  ease: "cubic-bezier(0.16,1,0.3,1)",
+  stagger: 0.1
+});
+
+/* 卡片入场：滚动视差淡入 + 上移 */
+gsap.from('.cards .card', {
+  y: 42, opacity: 0,
+  duration: 0.9,
+  ease: "cubic-bezier(0.16,1,0.3,1)",
+  stagger: { each: 0.1 },
+  scrollTrigger: {
+    trigger: '.cards',
+    start: 'top 85%',
+    toggleActions: 'play none none none'
+  }
+});
+</script>
 
 </body>
 </html>
