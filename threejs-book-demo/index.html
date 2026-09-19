@@ -2,332 +2,123 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>📚 3D Bookshelf — Web Explorer</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  background: #000;
-  overflow: hidden;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  color: #fff;
+:root{
+  --bg1:#0d0e1a;--bg2:#04040a;--text:#e9ecf4;--muted:rgba(205,212,228,.55);--dim:rgba(205,212,228,.32);
+  --line:rgba(255,255,255,.09);--panel:rgba(255,255,255,.035);--mono:"SF Mono","JetBrains Mono",ui-monospace,Consolas,monospace;
 }
-
-#canvas3d {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  z-index: 1;
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:radial-gradient(130% 90% at 50% 0%,var(--bg1),var(--bg2) 78%);
+  color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;
+  overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased;
 }
+#canvas3d{position:fixed;inset:0;display:block;touch-action:none}
 
-/* UI Overlay */
-.ui-overlay {
-  position: fixed;
-  z-index: 10;
-  pointer-events: none;
-}
+#errorBanner{position:fixed;top:14px;left:14px;right:14px;z-index:300;display:none;padding:10px 14px;border-radius:10px;background:rgba(178,24,24,.88);color:#fff;font-size:.8rem;font-family:var(--mono);word-break:break-all}
+#errorBanner.show{display:block}
 
-.ui-overlay * {
-  pointer-events: auto;
-}
+.ui-overlay{position:fixed;z-index:10;pointer-events:none}
+.ui-overlay .click-btn{pointer-events:auto}
 
-/* Top bar */
-.top-bar {
-  top: 0; left: 0; right: 0;
-  padding: 20px 32px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%);
-}
+.top-bar{top:0;left:0;right:0;padding:22px 34px;display:flex;align-items:center;gap:14px;background:linear-gradient(180deg,rgba(4,4,10,.55) 0%,transparent 100%)}
+.logo{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,#7b93ff,#c467d2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.subtitle{font-size:.76rem;color:var(--muted);margin-top:3px}
+.hint{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:.74rem;color:var(--muted);padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);backdrop-filter:blur(6px);white-space:nowrap}
+kbd{font-family:var(--mono);font-size:.64rem;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:5px;padding:2px 7px;margin-right:4px}
+@media(max-width:640px){.hint{display:none}}
 
-.logo {
-  font-size: 1.4rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
+.info-panel{bottom:0;left:0;right:0;display:flex;justify-content:center;padding:0 16px 26px}
+.ip-card{position:relative;width:min(440px,100%);padding:16px 22px 18px;border-radius:16px;background:rgba(14,15,26,.72);border:1px solid var(--line);backdrop-filter:blur(14px);transform:translateY(14px);opacity:0;transition:transform .45s cubic-bezier(.16,1,.3,1),opacity .45s ease}
+.info-panel.visible .ip-card{transform:translateY(0);opacity:1}
+.ip-card::before{content:'';position:absolute;top:0;left:14px;right:14px;height:3px;border-radius:2px;background:var(--ipc,#667eea)}
+.ip-index{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;color:var(--ipc);opacity:.9}
+.info-title{display:flex;align-items:center;gap:9px;font-size:1.15rem;font-weight:700;margin:8px 0 5px}
+.info-icon{font-size:1.2rem}
+.info-desc{font-size:.84rem;color:var(--muted);line-height:1.55}
+.click-btn{margin-top:14px;width:100%;padding:11px 18px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.16);background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.05));color:var(--text);font-size:.88rem;font-weight:600;transition:transform .25s,box-shadow .25s,border-color .25s}
+.click-btn:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,.45);border-color:rgba(255,255,255,.35)}
+.click-btn:active{transform:translateY(0)}
+.ip-keys{margin-top:13px;display:flex;justify-content:center;gap:14px;font-size:.66rem;color:var(--dim)}
+@media(max-width:600px){.ip-keys{display:none}.info-panel{padding-bottom:16px}.ip-card{padding:14px 16px}}
 
-.subtitle {
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.4);
-  margin-top: 2px;
-}
+.modal-overlay{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(3,3,8,.88);backdrop-filter:blur(14px)}
+.modal-overlay.active{display:flex}
+.modal-content{width:min(92vw,900px);height:min(82vh,620px);border-radius:16px;overflow:hidden;background:#101220;box-shadow:0 40px 100px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.1);animation:modalIn .45s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column}
+@keyframes modalIn{from{transform:scale(.93) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02);position:relative}
+.modal-header::before{content:'';position:absolute;top:0;left:0;height:3px;width:140px;background:var(--mc,#667eea);border-radius:3px}
+.modal-title{display:flex;align-items:center;gap:10px;font-weight:600;font-size:1rem}
+.modal-icon{font-size:1.25rem}
+.modal-close{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:var(--muted);font-size:.95rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;pointer-events:auto}
+.modal-close:hover{background:rgba(255,255,255,.14);color:#fff;transform:rotate(90deg)}
+.modal-body{flex:1;position:relative}
+.modal-body iframe{position:absolute;inset:0;width:100%;height:100%;border:none}
+.modal-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.03),transparent 60%);color:var(--muted);font-size:.88rem;letter-spacing:.05em}
+.spinner{width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.1);border-top-color:var(--mc,#667eea);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.modal-progress{width:160px;height:2px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+.modal-progress i{display:block;width:0%;height:100%;background:var(--mc,#667eea)}
 
-.hint {
-  font-size: 0.85rem;
-  color: rgba(255,255,255,0.5);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+.book-label{position:fixed;z-index:5;pointer-events:none;padding:5px 11px;border-radius:999px;background:rgba(8,9,18,.72);border:1px solid var(--line);backdrop-filter:blur(8px);font-size:.72rem;font-weight:600;color:rgba(233,236,244,.85);display:flex;align-items:center;gap:7px;white-space:nowrap;transform:translate(-50%,-100%)}
+.book-label .dot{width:7px;height:7px;border-radius:50%;background:var(--ipc,#667eea);box-shadow:0 0 8px var(--ipc)}
 
-.hint-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: rgba(255,255,255,0.1);
-  font-size: 0.75rem;
-}
-
-/* Book info panel (bottom) */
-.info-panel {
-  bottom: 0; left: 0; right: 0;
-  padding: 24px 32px;
-  background: linear-gradient(0deg, rgba(0,0,0,0.7) 0%, transparent 100%);
-  text-align: center;
-  transition: all 0.5s ease;
-}
-
-.info-panel h2 {
-  font-size: 1.3rem;
-  font-weight: 600;
-  margin-bottom: 6px;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: all 0.4s ease;
-}
-
-.info-panel p {
-  font-size: 0.85rem;
-  color: rgba(255,255,255,0.5);
-  opacity: 0;
-  transform: translateY(10px);
-  transition: all 0.4s ease 0.1s;
-}
-
-.info-panel.visible h2,
-.info-panel.visible p {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.click-btn {
-  margin-top: 14px;
-  padding: 10px 28px;
-  border-radius: 50px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.3s;
-  backdrop-filter: blur(10px);
-  opacity: 0;
-  transform: translateY(10px);
-  transition: all 0.4s ease 0.2s;
-}
-
-.info-panel.visible .click-btn {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.click-btn:hover {
-  background: rgba(255,255,255,0.15);
-  border-color: rgba(255,255,255,0.4);
-}
-
-/* Book detail modal */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.85);
-  z-index: 100;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(20px);
-  animation: fadeIn 0.3s ease;
-}
-
-.modal-overlay.active {
-  display: flex;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.modal-content {
-  width: 85vw;
-  height: 80vh;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #1a1a2e;
-  box-shadow: 0 20px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
-  animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex;
-  flex-direction: column;
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  background: rgba(255,255,255,0.03);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-
-.modal-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.modal-icon {
-  font-size: 1.3rem;
-}
-
-.modal-close {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  font-size: 1.1rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-close:hover {
-  background: rgba(255,255,255,0.15);
-}
-
-.modal-body {
-  flex: 1;
-  position: relative;
-}
-
-.modal-body iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
-}
-
-.modal-loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: rgba(255,255,255,0.4);
-  font-size: 0.9rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.modal-loading .spinner {
-  width: 32px;
-  height: 32px;
-  border: 2px solid rgba(255,255,255,0.1);
-  border-top-color: #667eea;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Book labels in 3D scene */
-.book-label {
-  position: fixed;
-  z-index: 5;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.1);
-  font-size: 0.75rem;
-  color: rgba(255,255,255,0.8);
-  pointer-events: none;
-  transition: opacity 0.3s;
-  white-space: nowrap;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .top-bar { padding: 16px 20px; }
-  .info-panel { padding: 16px 20px; }
-  .modal-content { width: 95vw; height: 85vh; border-radius: 12px; }
-}
+#webgl-fail{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;text-align:center;padding:40px;font-size:.95rem;line-height:1.8;color:var(--muted)}
+#webgl-fail.show{display:flex}
+@media(max-width:600px){.modal-content{height:84vh;border-radius:12px}}
 </style>
 </head>
 <body>
-
-<!-- 3D Canvas -->
 <canvas id="canvas3d"></canvas>
+<div id="errorBanner"></div>
+<div id="webgl-fail"><div><b>⚠ WebGL 不可用</b><br>本页面需要 WebGL 渲染 3D 书架，<br>请更新浏览器或启用 GPU 硬件加速后重试。</div></div>
 
-<!-- Top Bar -->
 <div class="ui-overlay top-bar">
   <div>
     <div class="logo">📚 3D Bookshelf</div>
-    <div class="subtitle">点击书架上的书，进入网页世界</div>
+    <div class="subtitle">点击书架上的书，进入网页世界 · Three.js</div>
   </div>
-  <div class="hint">
-    <span class="hint-icon">🖱</span>
-    拖拽旋转 · 滚轮缩放 · 点击书翻开
-  </div>
+  <div class="hint"><kbd>↔</kbd> 拖拽旋转 <kbd>⇄</kbd> 滚轮缩放 <kbd>1–7</kbd> 翻开</div>
 </div>
 
-<!-- Info Panel -->
 <div class="ui-overlay info-panel" id="infoPanel">
-  <h2 id="infoTitle">—</h2>
-  <p id="infoDesc">—</p>
-  <button class="click-btn" id="infoBtn">翻开这本书 →</button>
+  <div class="ip-card" id="ipCard">
+    <div class="ip-index" id="ipIndex">— / 07</div>
+    <h2 class="info-title"><span class="info-icon" id="infoIcon">📖</span><span id="infoTitle">—</span></h2>
+    <p class="info-desc" id="infoDesc">将鼠标移向一本书</p>
+    <button class="click-btn" id="infoBtn">翻开这本书 <span>→</span></button>
+    <div class="ip-keys"><span><kbd>Enter</kbd> 翻开</span><span><kbd>1–7</kbd> 直达</span><span><kbd>Esc</kbd> 关闭</span></div>
+  </div>
 </div>
 
-<!-- Book Detail Modal -->
 <div class="modal-overlay" id="modal">
   <div class="modal-content">
-    <div class="modal-header">
-      <div class="modal-title">
-        <span class="modal-icon" id="modalIcon">📖</span>
-        <span id="modalTitle">—</span>
-      </div>
-      <button class="modal-close" id="modalClose">✕</button>
+    <div class="modal-header" id="modalHeader">
+      <div class="modal-title"><span class="modal-icon" id="modalIcon">📖</span><span id="modalTitle">—</span></div>
+      <button class="modal-close" id="modalClose" aria-label="关闭">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body" id="modalBody">
       <div class="modal-loading" id="modalLoading">
         <div class="spinner"></div>
-        正在打开书页...
+        <span id="modalLoadMsg">正在打开书页…</span>
+        <div class="modal-progress"><i id="modalProg"></i></div>
       </div>
-      <iframe id="modalIframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+      <iframe id="modalIframe" src="about:blank" title="书页"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>
     </div>
   </div>
 </div>
 
-<!-- Book labels container -->
 <div id="labelsContainer"></div>
 
-<!-- Three.js via importmap -->
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
   }
 }
 </script>
@@ -336,551 +127,470 @@ body {
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// ─── Book Data ───
-const booksData = [
-  {
-    title: 'Wikipedia',
-    icon: '📚',
-    desc: '人类知识的总和',
-    color: '#6B8E23',
-    spineColor: '#556B2F',
-    src: 'https://zh.wikipedia.org/wiki/Portal:Today'
-  },
-  {
-    title: 'Hacker News',
-    icon: '🔥',
-    desc: '科技圈热点资讯',
-    color: '#FF6B35',
-    spineColor: '#CC5522',
-    src: 'https://news.ycombinator.com'
-  },
-  {
-    title: 'GitHub',
-    icon: '🐙',
-    desc: '全球最大开源社区',
-    color: '#E8E8E8',
-    spineColor: '#333',
-    src: 'https://github.com/trending'
-  },
-  {
-    title: 'Dribbble',
-    icon: '🎨',
-    desc: '设计师灵感天堂',
-    color: '#EA4C89',
-    spineColor: '#CC3366',
-    src: 'https://dribbble.com'
-  },
-  {
-    title: 'Awwwards',
-    icon: '🏆',
-    desc: '顶尖网页设计大奖',
-    color: '#FFD700',
-    spineColor: '#CCAA00',
-    src: 'https://www.awwwards.com'
-  },
-  {
-    title: 'Product Hunt',
-    icon: '🚀',
-    desc: '最新最酷的科技产品',
-    color: '#FF4655',
-    spineColor: '#CC3340',
-    src: 'https://www.producthunt.com'
-  },
-  {
-    title: 'Reddit',
-    icon: '🤖',
-    desc: '互联网的首页',
-    color: '#FF4500',
-    spineColor: '#CC3700',
-    src: 'https://www.reddit.com/r/popular'
-  },
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const easeOut = p => 1 - Math.pow(1 - p, 3);
+
+/* 错误横幅（开发守卫） */
+const errB = document.getElementById('errorBanner');
+const addErr = (m) => { if (errB) { errB.textContent = String(m); errB.classList.add('show'); } };
+window.addEventListener('error', e => { addErr(e.error ? (e.error.message || e.error.name) : (e.message || 'script error')); });
+window.addEventListener('unhandledrejection', e => addErr('unhandled rejection'));
+
+/* ─── 书本数据 ─── */
+const BOOKS = [
+  { title:'Wikipedia',    icon:'📚', desc:'人类知识的总和',   color:'#5e7d2f', spine:'#46622a', src:'https://zh.wikipedia.org/wiki/Portal:Today', accent:'#8fb54a' },
+  { title:'Hacker News',  icon:'🔥', desc:'科技圈热点资讯',   color:'#ff6b35', spine:'#c7501e', src:'https://news.ycombinator.com', accent:'#ff8a5e' },
+  { title:'GitHub',       icon:'🐙', desc:'全球最大开源社区', color:'#8b949e', spine:'#565f68', src:'https://github.com/trending', accent:'#9fb0b9' },
+  { title:'Dribbble',     icon:'🎨', desc:'设计师灵感天堂',   color:'#ea4c89', spine:'#c03564', src:'https://dribbble.com', accent:'#f06a9d' },
+  { title:'Awwwards',     icon:'🏆', desc:'顶尖网页设计大奖', color:'#e6b622', spine:'#b39014', src:'https://www.awwwards.com', accent:'#f0c95a' },
+  { title:'Product Hunt', icon:'🚀', desc:'最新最酷的科技产品', color:'#ff4655', spine:'#c9353f', src:'https://www.producthunt.com', accent:'#ff6a75' },
+  { title:'Reddit',       icon:'👺', desc:'互联网的首页',     color:'#ff4500', spine:'#cc3700', src:'https://www.reddit.com/r/popular', accent:'#ff7a44' },
 ];
 
-// ─── Scene Setup ───
 const canvas = document.getElementById('canvas3d');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+} catch (e) {
+  document.getElementById('webgl-fail').classList.add('show');
+  addErr('WebGL 初始化失败: ' + (e.message || e));
+  throw e;
+}
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMappingExposure = 1.15;
 
+const FOG = 0x080910;
 const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(FOG, 0.045);
+scene.background = new THREE.Color(FOG);
 
-// Fog for depth
-scene.fog = new THREE.FogExp2(0x0a0a1a, 0.035);
-
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 2, 10);
-
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
-controls.maxPolarAngle = Math.PI / 2 + 0.3;
-controls.minPolarAngle = 0.3;
-controls.minDistance = 4;
-controls.maxDistance = 20;
-controls.target.set(0, 1.5, 0);
+controls.enablePan = false;            /* v2: 禁止平移，视角不会跑飞 */
+controls.minDistance = 4.5;
+controls.maxDistance = 18;
+controls.minPolarAngle = 0.35;
+controls.maxPolarAngle = 1.5;          /* v2: 不允许转到地面下方 */
+controls.target.set(0, 1.35, 0);
+controls.update();
 
-// ─── Lighting ───
-const ambientLight = new THREE.AmbientLight(0x404060, 0.6);
-scene.add(ambientLight);
+/* ─── 灯光 ─── */
+scene.add(new THREE.AmbientLight(0x44446a, 0.55));
+const key = new THREE.DirectionalLight(0xfff2d8, 1.5);
+key.position.set(6, 9, 4);
+key.castShadow = true;
+key.shadow.bias = -0.0008;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.near = 0.5; key.shadow.camera.far = 30;
+key.shadow.camera.left = -9; key.shadow.camera.right = 9; key.shadow.camera.top = 8; key.shadow.camera.bottom = -2;
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x667eea, 0.45); fill.position.set(-6, 4, -4); scene.add(fill);
+const rim = new THREE.PointLight(0x9b6cc4, 0.9, 30); rim.position.set(0, 7, -6); scene.add(rim);
+const lamp = new THREE.PointLight(0xffb36b, 1.1, 12); lamp.position.set(0, 3.7, 0.4); scene.add(lamp);
 
-const mainLight = new THREE.DirectionalLight(0xfff5e0, 1.5);
-mainLight.position.set(5, 8, 5);
-mainLight.castShadow = true;
-mainLight.shadow.mapSize.set(2048, 2048);
-mainLight.shadow.camera.near = 0.5;
-mainLight.shadow.camera.far = 30;
-mainLight.shadow.camera.left = -10;
-mainLight.shadow.camera.right = 10;
-mainLight.shadow.camera.top = 10;
-mainLight.shadow.camera.bottom = -5;
-mainLight.shadow.bias = -0.001;
-scene.add(mainLight);
-
-const fillLight = new THREE.DirectionalLight(0x667eea, 0.4);
-fillLight.position.set(-5, 4, -3);
-scene.add(fillLight);
-
-const rimLight = new THREE.PointLight(0x764ba2, 0.6, 20);
-rimLight.position.set(0, 6, -5);
-scene.add(rimLight);
-
-// ─── Environment ───
-// Floor
-const floorGeo = new THREE.PlaneGeometry(40, 40);
-const floorMat = new THREE.MeshStandardMaterial({
-  color: 0x111122,
-  roughness: 0.85,
-  metalness: 0.1,
-});
-const floor = new THREE.Mesh(floorGeo, floorMat);
-floor.rotation.x = -Math.PI / 2;
-floor.position.y = -0.01;
-floor.receiveShadow = true;
-scene.add(floor);
-
-// Bookshelf
-createBookshelf();
-
-// ─── Book Creation ───
-const bookMeshes = [];
-const bookGroup = new THREE.Group();
-scene.add(bookGroup);
-
-function createBookTexture(text, color, isSpine = false) {
-  const cvs = document.createElement('canvas');
-  cvs.width = 256;
-  cvs.height = isSpine ? 512 : 256;
+/* ─── 地面：径向暗角纹理 ─── */
+{
+  const cvs = document.createElement('canvas'); cvs.width = cvs.height = 1024;
   const ctx = cvs.getContext('2d');
+  const g = ctx.createRadialGradient(512, 512, 60, 512, 512, 800);
+  g.addColorStop(0, '#1b1d2e'); g.addColorStop(0.55, '#0e0e19'); g.addColorStop(1, '#05050a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 1024, 1024);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50),
+    new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(cvs), color: 0xffffff, roughness: 0.85 }));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
+  scene.add(floor);
+}
 
-  // Background
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, cvs.width, cvs.height);
+/* ─── 书架结构 ─── */
+{
+  const wood = new THREE.MeshStandardMaterial({ color: 0x4a3526, roughness: 0.7, metalness: 0.05 });
+  const trim = new THREE.MeshStandardMaterial({ color: 0x5c4230, roughness: 0.6 });
+  const add = (w, h, d, x, y, z, m = wood) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+    mesh.position.set(x, y, z); mesh.castShadow = true; mesh.receiveShadow = true;
+    scene.add(mesh);
+  };
+  add(12, 0.15, 2, 0, 0.6, 0);
+  /* v2: 饰条改为层板前沿薄边沿 (lip) — 不再与书本相交 */
+  add(12.0, 0.09, 0.08, 0, 0.71, 0.96);
+  add(0.12, 5, 2, 6, 3, 0);
+  add(0.12, 5, 2, -6, 3, 0);
+  add(12, 5, 0.08, 0, 3, -1, new THREE.MeshStandardMaterial({ color: 0x2a1a0f, roughness: 0.9 }));
+  add(12.4, 0.15, 2.2, 0, 5.5, 0, trim);
+  /* 第二层架 + 暖光灯带（填充原本的"死空间"） */
+  add(12, 0.12, 2, 0, 3.5, 0);
+  add(12.2, 0.06, 2.1, 0, 3.61, 0, trim);
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(11.7, 0.12),
+    new THREE.MeshBasicMaterial({ color: 0xffb36b, transparent: true, opacity: 0.5 }));
+  glow.position.set(0, 3.51, 1.012);
+  scene.add(glow);
+}
 
-  // Texture noise
-  for (let i = 0; i < 500; i++) {
-    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.05})`;
-    ctx.fillRect(Math.random() * cvs.width, Math.random() * cvs.height, 2, 2);
-  }
-
-  if (isSpine) {
-    // Spine text (vertical)
-    ctx.save();
-    ctx.translate(cvs.width / 2, cvs.height / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 32px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, 0, 0);
-    ctx.restore();
-
-    // Decorative lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, 80);
-    ctx.lineTo(cvs.width, 80);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(0, cvs.height - 80);
-    ctx.lineTo(cvs.width, cvs.height - 80);
-    ctx.stroke();
-  } else {
-    // Cover pattern
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 8; i++) {
-      ctx.beginPath();
-      ctx.moveTo(0, i * (cvs.height / 8));
-      ctx.lineTo(cvs.width, i * (cvs.height / 8));
-      ctx.stroke();
+/* ─── 封面 / 书脊纹理（v2: 标题画在正面封面，比例正确） ─── */
+function makeCoverTexture(b, front) {
+  const W = 512, H = 1280;
+  const cvs = document.createElement('canvas'); cvs.width = W; cvs.height = H;
+  const ctx = cvs.getContext('2d');
+  const c = new THREE.Color(b.color);
+  const col = (k) => '#' + (new THREE.Color(c).multiplyScalar(k).getHex());
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  if (front) { g.addColorStop(0, col(1.1)); g.addColorStop(0.55, col(0.75)); g.addColorStop(1, col(0.45)); }
+  else { g.addColorStop(0, col(0.5)); g.addColorStop(0.55, col(0.3)); g.addColorStop(1, col(0.16)); }
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 700; i++) { ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.05})`; ctx.fillRect(Math.random() * W, Math.random() * H, 2, 2); }
+  ctx.strokeStyle = 'rgba(255,255,255,' + (front ? 0.3 : 0.18) + ')';
+  ctx.lineWidth = 4; ctx.strokeRect(28, 28, W - 56, H - 56);
+  ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,' + (front ? 0.18 : 0.1) + ')'; ctx.strokeRect(44, 44, W - 88, H - 88);
+  const cy = 300;
+  ctx.fillStyle = 'rgba(255,255,255,' + (front ? 0.14 : 0.07) + ')';
+  ctx.beginPath(); ctx.arc(W / 2, cy, 92, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,' + (front ? 0.5 : 0.22) + ')';
+  ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(W / 2, cy, 92, 0, Math.PI * 2); ctx.stroke();
+  if (front) {
+    ctx.font = '700 84px Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillText(b.icon, W / 2, cy);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(W * 0.34, 520); ctx.lineTo(W * 0.66, 520); ctx.stroke();
+    const words = b.title.split(/\s+/);
+    const lines = [];
+    let line = '';
+    ctx.font = '700 62px Georgia, serif';
+    for (const w of words) {
+      const t = line ? line + ' ' + w : w;
+      if (ctx.measureText(t).width <= 430 || !line) line = t;
+      else { lines.push(line); line = w; }
     }
+    if (line) lines.push(line);
+    const y0 = lines.length === 1 ? H * 0.6 + 38 : H * 0.58;
+    ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 8;
+    lines.forEach((ln, i) => ctx.fillText(ln, W / 2, y0 + i * 74));
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(W * 0.25, H * 0.86); ctx.lineTo(W * 0.75, H * 0.86); ctx.stroke();
+    ctx.font = '600 26px Georgia, serif'; ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText('PLAY_GROUND · WEB EXPLORER', W / 2, H * 0.86 + 40);
   }
-
-  const tex = new THREE.CanvasTexture(cvs);
-  tex.colorSpace = THREE.SRGBColorSpace;
+  const tex = new THREE.CanvasTexture(cvs); tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function makeSpineTexture(b) {
+  const W = 128, H = 768;                       /* v2: 书脊比例 1:6，文字不再被拉伸 */
+  const cvs = document.createElement('canvas'); cvs.width = W; cvs.height = H;
+  const ctx = cvs.getContext('2d');
+  const c = new THREE.Color(b.spine);
+  const col = (k) => '#' + (new THREE.Color(c).multiplyScalar(k).getHex());
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, col(0.5)); g.addColorStop(0.5, col(1)); g.addColorStop(1, col(0.7));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 180; i++) { ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.05})`; ctx.fillRect(Math.random() * W, Math.random() * H, 2, 2); }
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(10, 110); ctx.lineTo(W - 10, 110); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(10, H - 110); ctx.lineTo(W - 10, H - 110); ctx.stroke();
+  ctx.save();
+  ctx.translate(W / 2, H / 2); ctx.rotate(Math.PI / 2);   /* 文字自上而下 */
+  ctx.font = '600 42px Georgia, serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.fillText(b.title, 0, 0);
+  ctx.restore();
+  const tex = new THREE.CanvasTexture(cvs); tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
 
-booksData.forEach((data, i) => {
-  const book = createBook(data, i);
-  bookMeshes.push(book);
-  bookGroup.add(book.group);
-});
-
-function createBook(data, index) {
+/* ─── 书（v2: 材质按书独立；朝向观众的是封面标题面） ─── */
+const books = [];
+const bookGroup = new THREE.Group();
+const SPACING = 1.25, H = 2.2, BW = 0.9, BD = 0.34;
+const BASE_Y = 1.765;              /* 书底 = 0.665, 刚好压住层板面(0.675) */
+BOOKS.forEach((b, i) => {
+  const coverF = new THREE.MeshStandardMaterial({ map: makeCoverTexture(b, true), roughness: 0.55, metalness: 0.05, emissive: new THREE.Color(0x000000) });
+  const coverB = new THREE.MeshStandardMaterial({ map: makeCoverTexture(b, false), roughness: 0.6, metalness: 0.05 });
+  const spineM = new THREE.MeshStandardMaterial({ map: makeSpineTexture(b), roughness: 0.6 });
+  const pg = () => new THREE.MeshStandardMaterial({ color: new THREE.Color(0xf3eddb).multiplyScalar(0.96 + Math.random() * 0.04), roughness: 0.95 });
+  /* 面序: +x 书缘, -x 书脊, +y 顶端, -y 底, +z 正面封面, -z 背面 */
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(BW, H, BD), [pg(), spineM, pg(), pg(), coverF, coverB]);
+  mesh.castShadow = true; mesh.receiveShadow = true;
   const group = new THREE.Group();
-
-  const bookW = 0.8;
-  const bookH = 2.2;
-  const bookD = 0.3;
-
-  // Materials for each face: +x, -x, +y, -y, +z, -z
-  const coverTex = createBookTexture(data.title, data.color);
-  const spineTex = createBookTexture(data.title, data.spineColor, true);
-  const pageMat = new THREE.MeshStandardMaterial({ color: 0xf5f0e8, roughness: 0.9 });
-
-  const materials = [
-    new THREE.MeshStandardMaterial({ map: coverTex, roughness: 0.6, metalness: 0.05 }), // right: front cover
-    new THREE.MeshStandardMaterial({ map: spineTex, roughness: 0.6, metalness: 0.05 }), // left: spine
-    pageMat, // top
-    pageMat, // bottom
-    new THREE.MeshStandardMaterial({ color: 0xe8e0d0, roughness: 0.8 }), // front pages edge
-    new THREE.MeshStandardMaterial({ map: coverTex, roughness: 0.6, metalness: 0.05 }), // back cover
-  ];
-
-  const geo = new THREE.BoxGeometry(bookW, bookH, bookD);
-  const mesh = new THREE.Mesh(geo, materials);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-
-  // Position on shelf
-  const spacing = 1.2;
-  const startX = -((booksData.length - 1) * spacing) / 2;
-  const x = startX + index * spacing;
-
-  mesh.position.set(x, bookH / 2 + 0.65, 0);
-
-  // Slight random tilt for natural look
-  mesh.rotation.z = (Math.random() - 0.5) * 0.04;
+  mesh.rotation.z = (Math.random() - 0.5) * 0.06;
   mesh.rotation.x = (Math.random() - 0.5) * 0.02;
-
-  group.add(mesh);
-
-  // Store metadata
+  group.position.set(-((BOOKS.length - 1) * SPACING) / 2 + i * SPACING, BASE_Y, 0);
   group.userData = {
-    title: data.title,
-    icon: data.icon,
-    desc: data.desc,
-    src: data.src,
-    color: data.color,
-    baseY: bookH / 2 + 0.65,
-    baseRotZ: mesh.rotation.z,
-    baseRotX: mesh.rotation.x,
-    hoverPhase: Math.random() * Math.PI * 2,
-    isHovered: false,
+    ...b, baseY: BASE_Y, baseRotZ: mesh.rotation.z, baseRotX: mesh.rotation.x, index: i,
+    hovered: false, lifted: 0, clickT: -1, introDone: false, introT0: 0.9 + i * 0.1, hoverPhase: Math.random() * Math.PI * 2,
   };
+  group.add(mesh);
+  bookGroup.add(group);
+  books.push({ group, mesh, cover: coverF, data: b });
+});
+scene.add(bookGroup);
 
-  return { group, mesh, data };
-}
-
-function createBookshelf() {
-  const shelfMat = new THREE.MeshStandardMaterial({
-    color: 0x3d2b1f,
-    roughness: 0.7,
-    metalness: 0.05,
+/* ─── 第二层架摆件（小书 / 盆栽 / 闹钟 / 相框） ─── */
+{
+  const yB = 3.65;
+  const mini = (x, col, h) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.32, h, 0.55), new THREE.MeshStandardMaterial({ color: col, roughness: 0.6 }));
+    m.position.set(x, yB + h / 2 + 0.02, 0.1);
+    m.rotation.z = (Math.random() - 0.5) * 0.08;
+    m.castShadow = true; m.receiveShadow = true; scene.add(m);
+  };
+  mini(-4.8, 0x7a3a55, 0.95); mini(-4.1, 0x3a5c7a, 1.15); mini(-3.3, 0x557a3a, 0.85);
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.26, 0.5, 10),
+    new THREE.MeshStandardMaterial({ color: 0x8a5a33, roughness: 0.9 }));
+  pot.position.set(0.9, yB + 0.25, 0.1); pot.castShadow = true; pot.receiveShadow = true; scene.add(pot);
+  const leaf = new THREE.MeshStandardMaterial({ color: 0x3f7a45, roughness: 0.9 });
+  [[0, 0.72, 0.1], [0.15, 0.6, 0.12], [-0.14, 0.63, 0.08], [0.03, 0.85, 0.13]].forEach(([x, y, z]) => {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.24, 10, 8), leaf);
+    s.scale.set(1, 0.62, 0.9); s.position.set(x, yB + y, z);
+    s.rotation.x = Math.random() * 0.4; s.rotation.y = Math.random() * Math.PI;
+    s.castShadow = true; scene.add(s);
   });
-
-  // Main shelf board
-  const shelfGeo = new THREE.BoxGeometry(12, 0.15, 2);
-  const shelf = new THREE.Mesh(shelfGeo, shelfMat);
-  shelf.position.set(0, 0.6, 0);
-  shelf.castShadow = true;
-  shelf.receiveShadow = true;
-  scene.add(shelf);
-
-  // Shelf edge trim
-  const trimGeo = new THREE.BoxGeometry(12.2, 0.08, 2.1);
-  const trimMat = new THREE.MeshStandardMaterial({ color: 0x4a3728, roughness: 0.6 });
-  const trim = new THREE.Mesh(trimGeo, trimMat);
-  trim.position.set(0, 0.72, 0);
-  trim.receiveShadow = true;
-  scene.add(trim);
-
-  // Side panels
-  const panelGeo = new THREE.BoxGeometry(0.12, 5, 2);
-  const leftPanel = new THREE.Mesh(panelGeo, shelfMat);
-  leftPanel.position.set(-6, 3, 0);
-  leftPanel.castShadow = true;
-  leftPanel.receiveShadow = true;
-  scene.add(leftPanel);
-
-  const rightPanel = new THREE.Mesh(panelGeo, shelfMat);
-  rightPanel.position.set(6, 3, 0);
-  rightPanel.castShadow = true;
-  rightPanel.receiveShadow = true;
-  scene.add(rightPanel);
-
-  // Back panel
-  const backGeo = new THREE.BoxGeometry(12, 5, 0.08);
-  const backMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0f, roughness: 0.9 });
-  const back = new THREE.Mesh(backGeo, backMat);
-  back.position.set(0, 3, -1);
-  back.receiveShadow = true;
-  scene.add(back);
-
-  // Top crown molding
-  const crownGeo = new THREE.BoxGeometry(12.4, 0.15, 2.2);
-  const crown = new THREE.Mesh(crownGeo, trimMat);
-  crown.position.set(0, 5.5, 0);
-  crown.castShadow = true;
-  scene.add(crown);
-
-  // Second shelf (empty, for visual interest)
-  const shelf2Geo = new THREE.BoxGeometry(12, 0.12, 2);
-  const shelf2 = new THREE.Mesh(shelf2Geo, shelfMat);
-  shelf2.position.set(0, 3.5, 0);
-  shelf2.castShadow = true;
-  shelf2.receiveShadow = true;
-  scene.add(shelf2);
-
-  // Second shelf trim
-  const trim2Geo = new THREE.BoxGeometry(12.2, 0.06, 2.1);
-  const trim2 = new THREE.Mesh(trim2Geo, trimMat);
-  trim2.position.set(0, 3.61, 0);
-  trim2.receiveShadow = true;
-  scene.add(trim2);
+  const cb = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.3, 24),
+    new THREE.MeshStandardMaterial({ color: 0xc94f3d, roughness: 0.5, metalness: 0.3 }));
+  cb.position.set(2.4, yB + 0.2, 0.1); cb.castShadow = true; cb.receiveShadow = true; scene.add(cb);
+  const cf = new THREE.Mesh(new THREE.CircleGeometry(0.27, 24),
+    new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.4 }));
+  cf.position.set(2.4, yB + 0.2, 0.405); scene.add(cf);
+  const ck = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, 0.05, 24),
+    new THREE.MeshStandardMaterial({ color: 0x2a2a33, roughness: 0.5, metalness: 0.5 }));
+  ck.position.set(2.4, yB + 0.03, 0.1); ck.castShadow = true; scene.add(ck);
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.04),
+    new THREE.MeshStandardMaterial({ color: 0x2b3a4a, roughness: 0.6 }));
+  fr.position.set(3.6, yB + 0.38, 0.15); fr.rotation.x = -0.08; fr.rotation.z = 0.05; fr.castShadow = true; scene.add(fr);
+  const ar = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.56),
+    new THREE.MeshStandardMaterial({ color: 0x6a4f7a, roughness: 0.9 }));
+  ar.position.set(3.6, yB + 0.37, 0.172); ar.rotation.x = -0.08; scene.add(ar);
 }
 
-// ─── Raycasting ───
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-let selectedBook = null;
-
-function onMouseMove(e) {
-  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-}
-
-function onClick(e) {
-  if (selectedBook) {
-    openBook(selectedBook);
+/* ─── 尘埃粒子 ─── */
+const dust = (() => {
+  const N = 140;
+  const base = [];
+  const arr = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const x = (Math.random() - 0.5) * 16, y = 0.5 + Math.random() * 6, z = (Math.random() - 0.5) * 6;
+    base.push({ x, y, z, ph: Math.random() * Math.PI * 2, s: 0.3 + Math.random() * 0.5 });
+    arr[i * 3] = x; arr[i * 3 + 1] = y; arr[i * 3 + 2] = z;
   }
-}
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xaab8e6, size: 0.03, transparent: true, opacity: 0.35, sizeAttenuation: true })));
+  return { arr, base };
+})();
 
-window.addEventListener('mousemove', onMouseMove);
-window.addEventListener('click', onClick);
-
-// Touch support
-window.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 1) {
-    const t = e.touches[0];
-    mouse.x = (t.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(t.clientY / window.innerHeight) * 2 + 1;
-  }
-}, { passive: true });
-
-window.addEventListener('touchend', (e) => {
-  if (selectedBook) {
-    openBook(selectedBook);
-  }
+/* ─── 浮动标签 ─── */
+const labels = [];
+const labC = document.getElementById('labelsContainer');
+books.forEach((bk) => {
+  const el = document.createElement('div');
+  el.className = 'book-label';
+  el.style.setProperty('--ipc', bk.data.accent);
+  const dot = document.createElement('span'); dot.className = 'dot';
+  const tx = document.createElement('span'); tx.textContent = bk.data.icon + ' ' + bk.data.title;
+  el.append(dot, tx);
+  labC.appendChild(el);
+  labels.push({ el, bk });
 });
 
-// ─── Modal Logic ───
+/* ─── UI 引用与 Modal 逻辑 ─── */
+const infoPanel = document.getElementById('infoPanel');
+const ipCard = document.getElementById('ipCard');
+const ipIndex = document.getElementById('ipIndex');
+const infoTitle = document.getElementById('infoTitle');
+const infoIcon = document.getElementById('infoIcon');
+const infoDesc = document.getElementById('infoDesc');
+const infoBtn = document.getElementById('infoBtn');
 const modal = document.getElementById('modal');
-const modalIframe = document.getElementById('modalIframe');
-const modalLoading = document.getElementById('modalLoading');
+const modalHeader = document.getElementById('modalHeader');
 const modalTitle = document.getElementById('modalTitle');
 const modalIcon = document.getElementById('modalIcon');
 const modalClose = document.getElementById('modalClose');
+const modalIframe = document.getElementById('modalIframe');
+const modalLoading = document.getElementById('modalLoading');
+const modalLoadMsg = document.getElementById('modalLoadMsg');
+const modalProg = document.getElementById('modalProg');
+let selectedBook = null;
+let loadTimer = null;
 
-function openBook(book) {
-  modalTitle.textContent = book.userData.title;
-  modalIcon.textContent = book.userData.icon;
-  modalLoading.style.display = 'flex';
-  modalIframe.src = 'about:blank';
-  modal.classList.add('active');
-
-  setTimeout(() => {
-    modalIframe.src = book.userData.src;
-    modalLoading.style.display = 'none';
-  }, 300);
+function showInfo(book) {
+  const b = book.data;
+  ipIndex.textContent = (b.index + 1).toString().padStart(2, '0') + ' / ' + BOOKS.length.toString().padStart(2, '0');
+  ipCard.style.setProperty('--ipc', b.accent);
+  infoIcon.textContent = b.icon;
+  infoTitle.textContent = b.title;
+  infoDesc.textContent = b.desc;
+  infoPanel.classList.add('visible');
 }
-
-modalClose.addEventListener('click', () => {
+function openBook(book) {
+  book.userData.clickT = clock.getElapsedTime();
+  modalHeader.style.setProperty('--mc', book.data.accent);
+  modalIcon.textContent = book.data.icon;
+  modalTitle.textContent = book.data.title;
+  modal.classList.add('active');
+  modalLoading.style.display = 'flex';
+  modalLoadMsg.textContent = '正在打开书页…';
+  modalProg.style.transition = 'none';
+  modalProg.style.width = '0%';
+  void modalProg.offsetWidth;
+  modalProg.style.transition = 'width 1.1s 0.4s cubic-bezier(.2,.8,.2,1)';
+  modalProg.style.width = '100%';
+  clearTimeout(loadTimer);
+  loadTimer = setTimeout(() => { modalLoading.style.display = 'none'; }, 6000);   /* 超时兜底 */
+  modalIframe.addEventListener('load', () => {
+    clearTimeout(loadTimer);
+    modalLoading.style.display = 'none';
+  }, { once: true });
+  modalIframe.src = book.data.src;
+  infoPanel.classList.remove('visible');
+  document.body.style.cursor = 'default';
+}
+function closeModal() {
+  if (loadTimer) { clearTimeout(loadTimer); loadTimer = null; }
   modal.classList.remove('active');
-  setTimeout(() => { modalIframe.src = 'about:blank'; }, 300);
+  setTimeout(() => { modalIframe.src = 'about:blank'; }, 350);
+}
+modalClose.addEventListener('click', closeModal);
+modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+infoBtn.addEventListener('click', () => { if (selectedBook) openBook(selectedBook); });
+
+/* ─── 指针：位移阈值判定"点击"，UI 与 Modal 区域被排除（修复 Bug 1/2） ─── */
+const mouse = new THREE.Vector2();
+window.addEventListener('pointermove', (e) => {
+  mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
 });
-
-modal.addEventListener('click', (e) => {
-  if (e.target === modal) {
-    modalClose.click();
-  }
+let downXY = null;
+window.addEventListener('pointerdown', (e) => {
+  if (modal.classList.contains('active')) return;
+  if (e.target.closest('.ui-overlay')) return;
+  downXY = { x: e.clientX, y: e.clientY };
 });
-
-// Close on Escape
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') modalClose.click();
-});
-
-// Info panel
-const infoPanel = document.getElementById('infoPanel');
-const infoTitle = document.getElementById('infoTitle');
-const infoDesc = document.getElementById('infoDesc');
-const infoBtn = document.getElementById('infoBtn');
-
-infoBtn.addEventListener('click', () => {
+window.addEventListener('pointerup', (e) => {
+  if (!downXY) return;
+  const dx = e.clientX - downXY.x, dy = e.clientY - downXY.y;
+  downXY = null;
+  if (Math.hypot(dx, dy) > 10 || modal.classList.contains('active')) return;
   if (selectedBook) openBook(selectedBook);
 });
 
-// ─── Book Labels ───
-const labelsContainer = document.getElementById('labelsContainer');
-const labels = [];
-
-bookMeshes.forEach(book => {
-  const label = document.createElement('div');
-  label.className = 'book-label';
-  label.textContent = `${book.userData.icon} ${book.userData.title}`;
-  label.style.opacity = '0';
-  labelsContainer.appendChild(label);
-  labels.push({ el: label, book });
+/* ─── 键盘：Esc / Enter / 1-7 ─── */
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { if (modal.classList.contains('active')) closeModal(); return; }
+  const n = parseInt(e.key, 10);
+  if (Number.isInteger(n) && n >= 1 && n <= BOOKS.length) openBook(books[n - 1]);
+  else if (e.key === 'Enter' && selectedBook) openBook(selectedBook);
 });
 
-function updateLabels() {
-  labels.forEach(({ el, book }) => {
-    const pos = new THREE.Vector3();
-    book.mesh.getWorldPosition(pos);
-    pos.y += 1.4;
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
 
-    const projected = pos.clone().project(camera);
-
-    if (projected.z > 1) {
-      el.style.opacity = '0';
-      return;
-    }
-
-    const x = (projected.x * 0.5 + 0.5) * window.innerWidth;
-    const y = (-projected.y * 0.5 + 0.5) * window.innerHeight;
-
-    el.style.left = x + 'px';
-    el.style.top = y + 'px';
-    el.style.transform = 'translate(-50%, -50%)';
-
-    const dist = camera.position.distanceTo(pos);
-    const opacity = THREE.MathUtils.clamp(1 - (dist - 5) / 12, 0, 1);
-    el.style.opacity = book.userData.isHovered ? '1' : String(opacity * 0.6);
-  });
-}
-
-// ─── Animation ───
+/* ─── 渲染主循环（v2: 入场动画并入主循环，不再与 float 争抢 position） ─── */
+const raycaster = new THREE.Raycaster();
+const zeroEm = new THREE.Color(0x000000);
+const hoverEm = new THREE.Color(0x000000);
+const camIn = { t0: 0.4, d: 1.8, done: false, from: new THREE.Vector3(0, 2.6, 15.5), to: new THREE.Vector3(0, 2, 10) };
 const clock = new THREE.Clock();
+const tmpV = new THREE.Vector3();
+
+function updateLabels() {
+  for (const L of labels) {
+    L.bk.group.getWorldPosition(tmpV);
+    tmpV.y += 1.5;
+    const p = tmpV.clone().project(camera);
+    if (p.z > 1) { L.el.style.opacity = '0'; L.el.style.left = '-999px'; continue; }
+    const x = (p.x * 0.5 + 0.5) * innerWidth;
+    const y = (-p.y * 0.5 + 0.5) * innerHeight;
+    L.el.style.left = x + 'px';
+    L.el.style.top = y + 'px';
+    const d = camera.position.distanceTo(tmpV);
+    const base = clamp(1 - (d - 4) / 10, 0, 1);
+    L.el.style.opacity = L.bk.userData.hovered ? '1' : (0.28 * base).toFixed(3);
+  }
+}
 
 function animate() {
   requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
 
-  const elapsed = clock.getElapsedTime();
+  /* 相机推近入场 */
+  if (!camIn.done) {
+    const p = Math.min(1, (t - camIn.t0) / camIn.d);
+    if (p >= 1) camIn.done = true;
+    camera.position.lerpVectors(camIn.from, camIn.to, easeOut(p));
+  }
   controls.update();
 
-  // Hover detection
+  /* 尘埃漂移 */
+  for (let i = 0; i < 140; i++) {
+    const b = dust.base[i];
+    dust.arr[i * 3 + 1] = b.y + Math.sin(t * 0.5 + b.ph) * 0.18 * b.s;
+    dust.arr[i * 3] = b.x + Math.sin(t * 0.3 + b.ph * 1.7) * 0.25 * b.s;
+    dust.arr[i * 3 + 2] = b.z + Math.cos(t * 0.4 + b.ph * 2.3) * 0.2 * b.s;
+  }
+  dust.arr.needsUpdate = true;
+
+  /* 悬停检测 */
+  const allowHover = t > 1.6;
   raycaster.setFromCamera(mouse, camera);
-  const meshes = bookMeshes.map(b => b.mesh);
-  const intersects = raycaster.intersectObjects(meshes);
-
-  // Reset previous hover
-  bookMeshes.forEach(b => { b.userData.isHovered = false; });
+  const meshes = books.map(b => b.mesh);
+  const hits = raycaster.intersectObjects(meshes, true);
   selectedBook = null;
-  infoPanel.classList.remove('visible');
-
-  if (intersects.length > 0) {
-    const hit = intersects[0].object.parent;
-    hit.userData.isHovered = true;
-    selectedBook = hit;
-    document.body.style.cursor = 'pointer';
-
-    infoTitle.textContent = `${hit.userData.icon} ${hit.userData.title}`;
-    infoDesc.textContent = hit.userData.desc;
-    infoPanel.classList.add('visible');
-  } else {
+  if (allowHover && hits.length) {
+    const book = books.find(b => b.mesh === hits[0].object);
+    if (book) {
+      book.userData.hovered = true;
+      selectedBook = book;
+      document.body.style.cursor = 'pointer';
+      showInfo(book);
+    }
+  }
+  if (!selectedBook) {
     document.body.style.cursor = 'default';
+    if (infoPanel.classList.contains('visible')) infoPanel.classList.remove('visible');
   }
 
-  // Animate books
-  bookMeshes.forEach((book, i) => {
+  /* 书本动画：入场 → 悬浮 / 悬停 / 点击脉冲 (位置写在 group 上) */
+  for (const book of books) {
     const ud = book.userData;
-    const t = elapsed;
-
-    // Gentle floating
-    const floatY = Math.sin(t * 0.5 + ud.hoverPhase) * 0.015;
-    book.mesh.position.y = ud.baseY + floatY;
-
-    if (ud.isHovered) {
-      // Hover: lift and glow
-      const targetY = ud.baseY + 0.15;
-      book.mesh.position.y += (targetY - book.mesh.position.y) * 0.1;
-      book.mesh.scale.lerp(new THREE.Vector3(1.08, 1.08, 1.08), 0.1);
-
-      // Subtle glow via emissive
-      book.mesh.material.forEach(m => {
-        if (m.emissive) {
-          m.emissive.lerp(new THREE.Color(0x333355), 0.05);
-        }
-      });
-    } else {
-      book.mesh.scale.lerp(new THREE.Vector3(1, 1, 1), 0.08);
-      book.mesh.material.forEach(m => {
-        if (m.emissive) {
-          m.emissive.lerp(new THREE.Color(0x000000), 0.05);
-        }
-      });
+    if (!ud.introDone) {
+      const p = Math.min(1, (t - ud.introT0) / 1.0);
+      const e = REDUCED ? Math.min(1, p * 3) : easeOut(p);
+      book.group.position.y = THREE.MathUtils.lerp(ud.baseY - 3.2, ud.baseY, e);
+      book.mesh.rotation.z = THREE.MathUtils.lerp(ud.baseRotZ * 2.2, ud.baseRotZ, e);
+      book.mesh.scale.setScalar(THREE.MathUtils.lerp(0.55, 1, e));
+      if (p >= 1) ud.introDone = true;
+      continue;
     }
-  });
-
-  // Animate rim light
-  rimLight.intensity = 0.5 + Math.sin(elapsed * 0.3) * 0.2;
+    const fy = REDUCED ? 0 : Math.sin(t * 0.5 + ud.hoverPhase) * 0.02;
+    if (ud.hovered) ud.lifted = THREE.MathUtils.lerp(ud.lifted, 0.16, 0.12);
+    else ud.lifted = THREE.MathUtils.lerp(ud.lifted, 0, 0.08);
+    book.group.position.y = ud.baseY + fy + ud.lifted;
+    const rx = ud.hovered ? 0.07 : ud.baseRotX;
+    book.mesh.rotation.x += (rx - book.mesh.rotation.x) * 0.1;
+    book.mesh.rotation.z += (ud.baseRotZ - book.mesh.rotation.z) * 0.06;
+    let s = ud.hovered ? 1.07 : 1;
+    const clickDt = t - ud.clickT;
+    if (clickDt > 0 && clickDt < 0.4) s *= 1 + 0.08 * Math.sin((clickDt / 0.4) * Math.PI);
+    book.mesh.scale.lerp(new THREE.Vector3(s, s, s), 0.14);
+    hoverEm.setHex(ud.data.accent);
+    if (ud.hovered) book.cover.emissive.lerp(hoverEm.multiplyScalar(0.22), 0.2);
+    else book.cover.emissive.lerp(zeroEm, 0.18);
+  }
 
   updateLabels();
   renderer.render(scene, camera);
 }
 
+window.__bookshelf = { THREE, books, camera, controls };
 animate();
-
-// ─── Resize ───
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// ─── Intro Animation ───
-// Books slide in from bottom
-bookMeshes.forEach((book, i) => {
-  const startY = -2;
-  const targetY = book.userData.baseY;
-  book.mesh.position.y = startY;
-
-  const startTime = clock.getElapsedTime() + i * 0.1;
-  const duration = 1.2;
-
-  function introAnimate() {
-    const t = clock.getElapsedTime();
-    const progress = Math.min(1, (t - startTime) / duration);
-    // Ease out elastic-ish
-    const eased = progress < 1
-      ? 1 - Math.pow(1 - progress, 3)
-      : 1;
-
-    book.mesh.position.y = THREE.MathUtils.lerp(startY, targetY, eased);
-
-    if (progress < 1) requestAnimationFrame(introAnimate);
-  }
-
-  introAnimate();
-});
-
 </script>
 
 </body>
